@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"log"
 	"nScrapper/helpers"
+	"os"
+	"strconv"
+	"strings"
 
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
@@ -22,24 +25,48 @@ func main() {
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
-
-	helpers.InitDataBase()
 	logs := helpers.InitLogger()
 	defer logs.Close()
+
+	helpers.InitDataBase()
+	if redstart := helpers.InitRediGo(os.Getenv("REDIS"), os.Getenv("REDIS_PWD")); !redstart {
+		helpers.LogError("Unable to connect to Prod Redis, check logs", nil)
+	}
 
 	path, _ := launcher.LookPath()
 	u := launcher.New().Bin(path).Headless(false).MustLaunch()
 	browser := rod.New().ControlURL(u).MustConnect()
 
-	// browser := rod.New().MustConnect().NoDefaultDevice()
 	defer browser.MustClose()
 
 	page := browser.MustPage("https://www.naukri.com/").MustWaitStable()
-	uniqueTags := make(map[string]bool)
+	page.Navigate("https://www.naukri.com/it-jobs?src=gnbjobs_homepage_srch")
+	count, countErr := page.Element(".styles_count-string__DlPaZ")
+	if countErr != nil {
+		helpers.LogError("countErr", countErr)
+	}
+	countTxt, countTxtErr := count.Text()
+	if countTxtErr != nil {
+		helpers.LogError("countTxtErr", countTxtErr)
+	}
+	res := strings.Split(countTxt, " of ")
+	num, conErr := strconv.Atoi(res[1])
+	if conErr != nil {
+		helpers.LogError("conErr", conErr)
+	}
+	totalPage := (num / 20) + 1
+	fmt.Println((num))
+	// uniqueTags := make(map[string]bool)
+	uniqueTags := make(chan string, 100)
 
-	for i := 1; i < 2; i++ {
+	go func() {
+		for lk := range uniqueTags {
+			helpers.InsertRedis(lk)
+		}
+	}()
+
+	for i := 1; i <= totalPage; i++ {
 		linkstr := fmt.Sprintf("https://www.naukri.com/it-jobs-%d?src=gnbjobs_homepage_srch", i)
-		// pageNErr := page.Navigate("https://www.naukri.com/it-jobs?src=gnbjobs_homepage_srch")
 		pageNErr := page.Navigate(linkstr)
 		if pageNErr != nil {
 			helpers.LogError("naukri.com", pageNErr)
@@ -64,14 +91,11 @@ func main() {
 			if lk == "" {
 				continue
 			}
-			uniqueTags[lk] = true
+			uniqueTags <- lk
 		}
 	}
 	fmt.Println(len(uniqueTags))
-	// for k := range uniqueTags {
-	// 	helpers.LogError(k, nil)
-	// }
 
-	helpers.Insert(uniqueTags)
-
+	close(uniqueTags)
+	helpers.Redigo.Close()
 }
