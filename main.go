@@ -58,12 +58,16 @@ func main() {
 	fmt.Println((num))
 	// uniqueTags := make(map[string]bool)
 	uniqueTags := make(chan string, 100)
+	page.Navigate("https://www.naukri.com/job-listings-it-manager-sterling-and-wilson-renewable-energy-navi-mumbai-mumbai-all-areas-4-to-8-years-221024006497?src=gnbjobs_homepage_srch&sid=17295907686549772&xp=3&px=9")
+	page.MustWaitDOMStable()
+	ele := helpers.NaukriElements(page)
+	fmt.Println("ele", ele)
 
-	go func() {
-		for lk := range uniqueTags {
-			helpers.InsertRedis(lk)
-		}
-	}()
+	// go func() {
+	// 	for lk := range uniqueTags {
+	// 		helpers.InsertRedis(lk)
+	// 	}
+	// }()
 
 	for i := 1; i <= totalPage; i++ {
 		linkstr := fmt.Sprintf("https://www.naukri.com/it-jobs-%d?src=gnbjobs_homepage_srch", i)
@@ -94,8 +98,6 @@ func main() {
 			uniqueTags <- lk
 		}
 	}
-	fmt.Println(len(uniqueTags))
-
 	close(uniqueTags)
 	helpers.Redigo.Close()
 }
