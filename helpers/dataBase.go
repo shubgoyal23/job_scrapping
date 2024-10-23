@@ -54,9 +54,39 @@ func InitRediGo(r string, pwd string) bool {
 	}
 }
 
-func InsertRedis(val string) {
-	_, err := Redigo.Get().Do("LPUSH", "job_listings", val)
+func InsertRedisList(val string) {
+	rc := Redigo.Get()
+	defer rc.Close()
+	_, err := rc.Do("LPUSH", "all_job_lisks", val)
 	if err != nil {
 		LogError("cannot insert", err)
 	}
+}
+func InsertRedisSet(val string) {
+	rc := Redigo.Get()
+	defer rc.Close()
+	_, err := rc.Do("SADD", "job_links_posted", val)
+	if err != nil {
+		LogError("cannot insert", err)
+	}
+}
+func CheckRedisSetMemeber(val string) bool {
+	rc := Redigo.Get()
+	defer rc.Close()
+	f, err := rc.Do("SISMEMBER", "job_links_posted", val)
+	fmt.Println(f)
+	if err != nil {
+		LogError("cannot insert", err)
+		return false
+	}
+	return true
+}
+
+func InsertSupabase(val types.JobListing) bool {
+	_, _, err := Conn.From("job_listings").Insert(val, false, "replace", "returning", "id").Execute()
+	if err != nil {
+		fmt.Println("cannot insert", err)
+		return false
+	}
+	return true
 }

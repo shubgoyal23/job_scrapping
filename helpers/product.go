@@ -96,15 +96,11 @@ func NaukriElements(page *rod.Page) (jobD types.JobListing) {
 		}
 	}
 
-	// Todo
-
-	// if remoteElement, err := page.Timeout(5 * time.Second).Element(".styles_jhc__loc___Du2H"); err == nil {
-	// 	if remote, re := remoteElement.Text(); re == nil {
-	// 		jobD.RemoteOption = remote
-	// 	} else {
-	// 		LogError("cannot get remote option", re)
-	// 	}
-	// }
+	if remoteElement, err := page.Timeout(5 * time.Second).Element(".styles_jhc__wfhmode-link__aHmrK"); err == nil {
+		if _, re := remoteElement.Text(); re == nil {
+			jobD.RemoteOption = true
+		}
+	}
 
 	if salaryElement, err := page.Timeout(5 * time.Second).Element(".styles_jhc__salary__jdfEC"); err == nil {
 		if salaryText, se := salaryElement.Text(); se == nil {
@@ -149,7 +145,7 @@ func NaukriElements(page *rod.Page) (jobD types.JobListing) {
 
 	if jobSkillsElement, err := page.Timeout(5 * time.Second).Element("#root > div > main > div.styles_jdc__content__EZJMQ > div.styles_left-section-container__btAcB > section.styles_job-desc-container__txpYf > div:nth-child(2) > div.styles_JDC__dang-inner-html__h0K4t > ul:nth-child(23)"); err == nil {
 		if js, se := jobSkillsElement.Text(); se == nil {
-			jobD.Skills = []string{js}
+			jobD.Skills = strings.Split(js, "\n")
 		} else {
 			LogError("cannot get job skills", se)
 		}
@@ -157,7 +153,7 @@ func NaukriElements(page *rod.Page) (jobD types.JobListing) {
 
 	if jobBenefitsElement, err := page.Timeout(5 * time.Second).Element(".styles_jhc__benefits__jdfEC"); err == nil {
 		if jb, be := jobBenefitsElement.Text(); be == nil {
-			jobD.Benefits = []string{jb}
+			jobD.Benefits = strings.Split(jb, "\n")
 		} else {
 			LogError("cannot get job benefits", be)
 		}
@@ -204,8 +200,8 @@ func NaukriElements(page *rod.Page) (jobD types.JobListing) {
 	jobD.JobURL = info.URL
 	jobD.CreatedAt = time.Now()
 
-	PrintToJson(jobD)
-	return
+	// PrintToJson(jobD)
+	return jobD
 }
 
 // func NaukriElemets(page *rod.Page) (jobD types.JobListingFeilds) {
