@@ -23,11 +23,11 @@ func main() {
 			helpers.LogError("naukri.com "+fmt.Sprintf("begin handler crashed because %s", r), nil)
 		}
 	}()
-
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
+	fmt.Println(os.Getenv("REDIS"), os.Getenv("REDIS_PWD"))
 	logs := helpers.InitLogger()
 	defer logs.Close()
 
