@@ -16,7 +16,7 @@ import (
 )
 
 var UniqueTags = make(chan string, 500) // chan to store unique tags
-var Headless = false                    // to run in headless mode
+var Headless = true                     // to run in headless mode
 var ScrapeMap = make(map[string]types.JobDataScrapeMap)
 
 // this function collects all the data from the page
