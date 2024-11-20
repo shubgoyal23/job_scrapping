@@ -165,6 +165,7 @@ func LinkDupper(jobMap types.JobDataScrapeMap) {
 
 	page := browser.MustPage(jobMap.Homepage).MustWaitStable()
 
+	AllTags := make(map[string]bool)
 	for _, pl := range jobMap.PageLinks {
 		pageNErr := page.Navigate(pl.Link)
 		if pageNErr != nil {
@@ -192,6 +193,7 @@ func LinkDupper(jobMap types.JobDataScrapeMap) {
 				if lk == "" {
 					continue
 				}
+				AllTags[lk] = true
 				UniqueTags <- lk
 			}
 
