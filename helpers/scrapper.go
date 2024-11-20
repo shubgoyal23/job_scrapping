@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-rod/rod"
@@ -23,7 +24,7 @@ func ScrapperElements(page *rod.Page, jobDMap types.JobDataScrapeMap) types.JobL
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Recovered in f", r)
-			LogError("naukri.com "+fmt.Sprintf("begin handler crashed because %s", r), nil)
+			LogError(fmt.Sprintf("ScrapperElements handler crashed for %s because %s", jobDMap.Homepage, r), nil)
 		}
 	}()
 
@@ -57,6 +58,9 @@ func ScrapperElements(page *rod.Page, jobDMap types.JobDataScrapeMap) types.JobL
 		} else if fVal.TagType == "url" {
 			if element, err := page.Timeout(5 * time.Second).Element(fVal.Element); err == nil {
 				if text, err := element.Attribute(fVal.AttributeTarget); err == nil {
+					if text == nil {
+						continue
+					}
 					text1 := CleanUrl(*text, jobDMap.Homepage)
 					SetField(&jobDetails, fname, text1)
 				} else {
@@ -66,7 +70,7 @@ func ScrapperElements(page *rod.Page, jobDMap types.JobDataScrapeMap) types.JobL
 		} else if fVal.TagType == "date" {
 			if element, err := page.Timeout(5 * time.Second).Element(fVal.Element); err == nil {
 				if text, err := element.Text(); err == nil {
-					var date time.Time
+					var date time.Time = time.Now()
 					text = CleanText(text, fVal.Cleaner)
 					d := strings.Split(text, " ")
 					if agoTago, e := strconv.Atoi(d[0]); e == nil {
@@ -79,8 +83,6 @@ func ScrapperElements(page *rod.Page, jobDMap types.JobDataScrapeMap) types.JobL
 								date = time.Now().AddDate(agoTago*-1, 0, 0)
 							}
 						}
-					} else {
-						date = time.Now()
 					}
 					SetField(&jobDetails, fname, date)
 				} else {
@@ -171,7 +173,7 @@ func LinkDupper(jobMap types.JobDataScrapeMap) {
 			continue
 		}
 		for {
-			if err := page.Timeout(30 * time.Second).WaitLoad(); err != nil {
+			if err := page.Timeout(30*time.Second).WaitDOMStable(2*time.Second, 5); err != nil {
 				LogError("error while waiting for page to be stable", err)
 				break
 			}
@@ -228,16 +230,42 @@ func GetDataFromLink() {
 	defer browser.MustClose()
 	page := browser.MustPage()
 
-	var jobData []types.JobListing
-	var jobLinks []string
+	var JobD struct {
+		mu       sync.Mutex
+		JobData  []types.JobListing
+		JobLinks []string
+	}
+
+	// every hour insert data
+	go func() {
+		for range time.Tick(time.Hour * 1) {
+			JobD.mu.Lock()
+			if len(JobD.JobData) == 0 {
+				JobD.mu.Unlock()
+				continue
+			}
+			if fres, err := InsertBulkDataPostgres(JobD.JobData); err != nil {
+				LogError("cannot insert job data", err)
+			} else {
+				if len(fres) > 0 {
+					InsertRedisSetBulk("Failde_posted_job_links", fres)
+				}
+				InsertRedisSetBulk("posted_job_links", JobD.JobLinks)
+			}
+			JobD.JobData = []types.JobListing{}
+			JobD.JobLinks = []string{}
+			JobD.mu.Unlock()
+		}
+	}()
 
 	for link := range UniqueTags {
 		// check if link exists in redis
-		if f, err := CheckRedisSetMemeber("posted_job_links", link); err != nil || f {
+		if f, err := CheckRedisSetMemeber("posted_job_links", link); err != nil {
 			LogError("cannot get from redis", err)
 			continue
+		} else if f {
+			continue
 		}
-
 		pageNErr := page.Timeout(30 * time.Second).Navigate(link)
 		if pageNErr != nil {
 			LogError(fmt.Sprintf("error while navigating to page: %s", link), pageNErr)
@@ -265,22 +293,24 @@ func GetDataFromLink() {
 		da.ApplicationDeadline = da.JobPostingDate.AddDate(0, 0, 30)
 		da.CreatedAt = time.Now()
 		da.UpdatedAt = time.Now()
-		jobData = append(jobData, da)
-		jobLinks = append(jobLinks, link)
-		if len(jobData) == 100 {
-			if err := InsertBulkDataPostgres(jobData); err != nil {
+		JobD.mu.Lock()
+		JobD.JobData = append(JobD.JobData, da)
+		JobD.JobLinks = append(JobD.JobLinks, link)
+		JobD.mu.Unlock()
+		if len(JobD.JobData) == 100 {
+			JobD.mu.Lock()
+			if fres, err := InsertBulkDataPostgres(JobD.JobData); err != nil {
 				LogError("cannot insert job data", err)
 			} else {
-				InsertRedisSetBulk("posted_job_links", jobLinks)
+				if len(fres) > 0 {
+					InsertRedisSetBulk("Failde_posted_job_links", fres)
+				}
+				InsertRedisSetBulk("posted_job_links", JobD.JobLinks)
 			}
-			jobData = []types.JobListing{}
-			jobLinks = []string{}
+			JobD.JobData = []types.JobListing{}
+			JobD.JobLinks = []string{}
+			JobD.mu.Unlock()
 		}
-	}
-	if err := InsertBulkDataPostgres(jobData); err != nil {
-		LogError("cannot insert job data", err)
-	} else {
-		InsertRedisSetBulk("posted_job_links", jobLinks)
 	}
 }
 

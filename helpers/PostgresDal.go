@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"context"
+	"fmt"
 	"nScrapper/types"
 	"os"
 
@@ -35,15 +36,43 @@ func CreateTablePostgres() error {
 }
 
 // insert bulk data in postgres
-func InsertBulkDataPostgres(val []types.JobListing) error {
+func InsertBulkDataPostgres(val []types.JobListing) ([]string, error) {
 	batch := &pgx.Batch{}
+	failedRecords := []string{}
 	for _, v := range val {
 		batch.Queue("Insert into job_listings (job_title, company_name, company_url, job_description, job_type, location, remote_option, salary_min, salary_max, experience_min, experience_max, education_requirements, skills, benefits, job_posting_date, application_deadline, job_url, created_at, updated_at) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)", v.JobTitle, v.CompanyName, v.CompanyURL, v.JobDescription, v.JobType, v.Location, v.RemoteOption, v.SalaryMin, v.SalaryMax, v.ExperienceMin, v.ExperienceMax, v.EducationRequirements, v.Skills, v.Benefits, v.JobPostingDate, v.ApplicationDeadline, v.JobURL, v.CreatedAt, v.UpdatedAt)
 	}
 	res := postgresConn.SendBatch(context.Background(), batch)
-	if err := res.Close(); err != nil {
-		LogError("cannot insert", err)
-		return err
+	defer res.Close()
+	for _, v := range val {
+		_, err := res.Exec()
+		if err != nil {
+			LogError(fmt.Sprintf("Failed to insert record %s", v.JobURL), err)
+			failedRecords = append(failedRecords, v.JobURL)
+		}
 	}
-	return nil
+	return failedRecords, nil
+}
+
+func GetManyDocPostgres(query string) ([]types.JobListing, error) {
+	var val []types.JobListing
+	r, err := postgresConn.Query(context.Background(), query)
+	if err != nil {
+		LogError("cannot get doc in postgres", err)
+		return nil, err
+	}
+	defer r.Close()
+	if r.Err() != nil {
+		LogError("cannot get doc in postgres", r.Err())
+		return nil, r.Err()
+	}
+	for r.Next() {
+		var res types.JobListing
+		if err := r.Scan(&res.ID, &res.JobTitle, &res.CompanyName, &res.CompanyURL, &res.JobDescription, &res.JobType, &res.Location, &res.RemoteOption, &res.SalaryMin, &res.SalaryMax, &res.ExperienceMin, &res.ExperienceMax, &res.EducationRequirements, &res.Skills, &res.Benefits, &res.JobPostingDate, &res.ApplicationDeadline, &res.JobURL, &res.CreatedAt, &res.UpdatedAt); err != nil {
+			LogError("cannot decode doc in postgres", err)
+			return nil, err
+		}
+		val = append(val, res)
+	}
+	return val, nil
 }

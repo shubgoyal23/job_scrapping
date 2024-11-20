@@ -48,7 +48,7 @@ func InsertMapToMongoDB() {
 	jobData.EducationRequirements = types.TagField{Element: ".styles_education__KXFkO > div.styles_details__Y424J", TagType: "[]string", Cleaner: "", AttributeTarget: ""}
 	jobData.Skills = types.TagField{Element: "div.styles_key-skill__GIPn_ > div > a > span", TagType: "[]string", Cleaner: "", AttributeTarget: ""}
 	jobData.Benefits = types.TagField{Element: ".styles_jhc__benefits__jdfEC", TagType: "string", Cleaner: "", AttributeTarget: ""}
-	jobData.JobPostingDate = types.TagField{Element: "#job_header > div.styles_jhc__bottom__DrTmB > div.styles_jhc__jd-stats__KrId0 > span:nth-child(1) > span", TagType: "date", Cleaner: "[^0-9]+", AttributeTarget: ""}
+	jobData.JobPostingDate = types.TagField{Element: "#job_header > div.styles_jhc__bottom__DrTmB > div.styles_jhc__jd-stats__KrId0 > span:nth-child(1) > span", TagType: "date", Cleaner: "", AttributeTarget: ""}
 	jobData.ApplicationDeadline = types.TagField{Element: "", TagType: "date", Cleaner: "", AttributeTarget: ""}
 
 	jg.JobData = jobData

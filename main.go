@@ -45,6 +45,7 @@ func main() {
 		helpers.LogError("Unable to get data from MongoDB, check logs", err)
 		return
 	}
+	// helpers.GetManyDocPostgres("SELECT * FROM job_listings WHERE updated_at > now() - interval '7 days'")
 	for _, v := range m {
 		jsond, err := bson.Marshal(v)
 		if err != nil {
@@ -58,15 +59,23 @@ func main() {
 		}
 		helpers.ScrapeMap[data.Homepage] = data
 	}
-	for _, v := range helpers.ScrapeMap {
-		helpers.LinkDupper(v)
-	}
 	go helpers.GetDataFromLink()
-
-	for range time.Tick(time.Hour * 12) {
+	go func() {
 		for _, v := range helpers.ScrapeMap {
 			helpers.LinkDupper(v)
-			time.Sleep(time.Hour * 1)
 		}
-	}
+		for range time.Tick(time.Hour * 12) {
+			for _, v := range helpers.ScrapeMap {
+				helpers.LinkDupper(v)
+				time.Sleep(time.Hour * 1)
+			}
+		}
+	}()
+	select {}
+	// updates the links older then 7 days every 24 hours
+	// go func() {
+	// 	for range time.Tick(time.Hour * 24) {
+
+	// 	}
+	// }()
 }
