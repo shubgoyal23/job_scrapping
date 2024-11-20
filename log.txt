@@ -1,0 +1,2 @@
+2024-11-20 09:57:48: running linkDuper for https://www.naukri.com scrapper at time: 2024-11-20 09:57:48.4021886 +0530 IST m=+3.002738401
+2024-11-20 09:57:56.0521623 +0530 IST m=+10.652712101: error while clicking next page button from page: https://www.naukri.com/it-jobs-in-bhopal-jobs-bhopal-13, element: #lastCompMark > a:nth-child(4), err: element has no visible shape or outside the viewport: <a.styles_btn-secondary__2AsIP>

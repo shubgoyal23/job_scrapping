@@ -2,9 +2,8 @@ package helpers
 
 import (
 	"log"
-	"net/url"
+	"nScrapper/types"
 	"os"
-	"regexp"
 	"time"
 )
 
@@ -29,43 +28,33 @@ func InitLogger() *os.File {
 	return Logger
 }
 
-func CleanUrl(l string, home_url string) string {
-	re := regexp.MustCompile(`^https://www\.naukri\.com/job-listings(?:-[a-zA-Z0-9]+)*(-[0-9]+)?$`)
+func InsertMapToMongoDB() {
+	var jg types.JobDataScrapeMap
+	jg.Homepage = "https://www.naukri.com"
+	jg.PageLinks = []types.PageLinks{{Link: "https://www.naukri.com/it-jobs-@@@?src=gnbjobs_homepage_srch", NextPageBtn: "#lastCompMark > a:nth-child(4)", Element: "#listContainer > div.styles_job-listing-container__OCfZC > div > div > div > div > a"}}
 
-	str, err := url.Parse(l)
-	if err != nil {
-		return "" // Invalid URL; return empty string
-	}
+	var jobData types.JobListingFeilds
+	jobData.JobTitle = types.TagField{Element: ".styles_jd-header-title__rZwM1", TagType: "string", Cleaner: "", AttributeTarget: ""}
+	jobData.CompanyName = types.TagField{Element: ".styles_jd-header-comp-name__MvqAI > a", TagType: "string", Cleaner: "", AttributeTarget: ""}
+	jobData.CompanyURL = types.TagField{Element: ".styles_jd-header-comp-name__MvqAI > a", TagType: "url", Cleaner: "", AttributeTarget: "href"}
+	jobData.JobDescription = types.TagField{Element: "#root > div > main > div.styles_jdc__content__EZJMQ > div.styles_left-section-container__btAcB > section.styles_job-desc-container__txpYf > div:nth-child(2)", TagType: "string", Cleaner: "", AttributeTarget: ""}
+	jobData.JobType = types.TagField{Element: "#root > div > main > div.styles_jdc__content__EZJMQ > div.styles_left-section-container__btAcB > section.styles_job-desc-container__txpYf > div:nth-child(2) > div.styles_other-details__oEN4O > div:nth-child(4) > span > span", TagType: "string", Cleaner: "", AttributeTarget: ""}
+	jobData.Location = types.TagField{Element: ".styles_jhc__loc___Du2H", TagType: "string", Cleaner: "", AttributeTarget: ""}
+	jobData.RemoteOption = types.TagField{Element: ".styles_jhc__wfhmode-link__aHmrK", TagType: "string", Cleaner: "", AttributeTarget: ""}
+	jobData.SalaryMin = types.TagField{Element: ".styles_jhc__salary__jdfEC", TagType: "range", Cleaner: "[^0-9.-]+", AttributeTarget: ""}
+	jobData.SalaryMax = types.TagField{Element: ".styles_jhc__salary__jdfEC", TagType: "range", Cleaner: "[^0-9.-]+", AttributeTarget: ""}
+	jobData.ExperienceMin = types.TagField{Element: ".styles_jhc__exp__k_giM", TagType: "range", Cleaner: "[^0-9.-]+", AttributeTarget: ""}
+	jobData.ExperienceMax = types.TagField{Element: ".styles_jhc__exp__k_giM", TagType: "range", Cleaner: "[^0-9.-]+", AttributeTarget: ""}
+	jobData.EducationRequirements = types.TagField{Element: ".styles_education__KXFkO > div.styles_details__Y424J", TagType: "[]string", Cleaner: "", AttributeTarget: ""}
+	jobData.Skills = types.TagField{Element: "div.styles_key-skill__GIPn_ > div > a > span", TagType: "[]string", Cleaner: "", AttributeTarget: ""}
+	jobData.Benefits = types.TagField{Element: ".styles_jhc__benefits__jdfEC", TagType: "string", Cleaner: "", AttributeTarget: ""}
+	jobData.JobPostingDate = types.TagField{Element: "#job_header > div.styles_jhc__bottom__DrTmB > div.styles_jhc__jd-stats__KrId0 > span:nth-child(1) > span", TagType: "date", Cleaner: "[^0-9]+", AttributeTarget: ""}
+	jobData.ApplicationDeadline = types.TagField{Element: "", TagType: "date", Cleaner: "", AttributeTarget: ""}
 
-	// If the URL does not have a hostname, join with the home_url
-	if len(str.Hostname()) == 0 {
-		ourl, oerr := url.JoinPath(home_url, str.Path)
-		if oerr != nil {
-			// Log the error and return empty string
-			LogError("ourl", oerr)
-			return ""
-		}
-		// Check if the cleaned URL matches the regex
-		if re.MatchString(ourl) {
-			return ourl
-		}
-		return ""
-	}
+	jg.JobData = jobData
 
-	// Ensure the URL uses HTTPS or HTTP
-	if str.Scheme != "https" && str.Scheme != "http" {
-		str.Scheme = "https"
+	// Insert the data into MongoDB
+	if err := InsertMongoDB(jg); err != nil {
+		LogError("cannot insert in mongodb", err)
 	}
-
-	// Parse the home URL to extract the hostname
-	h, err := url.Parse(home_url)
-	if err != nil || str.Hostname() != h.Hostname() {
-		return "" // Return empty if hostnames do not match or if home_url is invalid
-	}
-
-	// Match the URL against the regex
-	if re.MatchString(str.String()) {
-		return str.String() // Valid and cleaned URL
-	}
-	return "" // Return empty if the URL does not match
 }

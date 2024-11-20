@@ -1,0 +1,22 @@
+CREATE TABLE job_listings (
+    id SERIAL PRIMARY KEY,                          -- Unique identifier for each job listing
+    job_title VARCHAR(255) NOT NULL,               -- Title of the job
+    company_name VARCHAR(255) NOT NULL,            -- Name of the company offering the job
+    company_url VARCHAR(255),                       -- URL to the company's website
+    job_description TEXT NOT NULL,                  -- Detailed description of the job
+    job_type VARCHAR(50),                           -- Type of job (e.g., Full-time, Part-time, Contract, Internship)
+    location VARCHAR(255) NOT NULL,                 -- Location of the job (city, state, country)
+    remote_option BOOLEAN DEFAULT FALSE,            -- Is the job remote? (true/false)
+    salary_min DECIMAL(10, 2),                     -- Minimum salary for the job
+    salary_max DECIMAL(10, 2),                     -- Maximum salary for the job
+    experience_min INT,                             -- Minimum experience required (in years)
+    experience_max INT,                             -- Maximum experience required (in years)
+    education_requirements TEXT[],            -- Required education qualifications
+    skills TEXT[],                                   -- Required skills (array of strings)
+    benefits TEXT[],                                 -- Benefits offered by the company (array of strings)
+    job_posting_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Date and time when the job was posted
+    application_deadline TIMESTAMP,                 -- Deadline for applications
+    job_url VARCHAR(255) NOT NULL UNIQUE,          -- URL to the job listing on the website
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Record creation timestamp
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP  -- Record update timestamp
+)
