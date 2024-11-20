@@ -165,7 +165,6 @@ func LinkDupper(jobMap types.JobDataScrapeMap) {
 
 	page := browser.MustPage(jobMap.Homepage).MustWaitStable()
 
-	AllTags := make(map[string]bool)
 	for _, pl := range jobMap.PageLinks {
 		pageNErr := page.Navigate(pl.Link)
 		if pageNErr != nil {
@@ -193,11 +192,6 @@ func LinkDupper(jobMap types.JobDataScrapeMap) {
 				if lk == "" {
 					continue
 				}
-				if _, ok := AllTags[lk]; ok {
-					continue
-				}
-
-				AllTags[lk] = true
 				UniqueTags <- lk
 			}
 
@@ -212,7 +206,6 @@ func LinkDupper(jobMap types.JobDataScrapeMap) {
 				LogError(fmt.Sprintf("error while clicking next page button from page: %s, element: %s, err:", pl.Link, pl.NextPageBtn), nextBtnErr)
 				break
 			}
-
 		}
 	}
 }
@@ -311,6 +304,76 @@ func GetDataFromLink() {
 			JobD.JobLinks = []string{}
 			JobD.mu.Unlock()
 		}
+	}
+}
+
+// this function gets the data from the links in chan UniqueTags and stores it in postgres and redis set
+func UpdateDataFromLink() {
+	defer func() {
+		if r := recover(); r != nil {
+			LogError(fmt.Sprintf("updateDataFromLink crashed because %s", r), nil)
+		}
+	}()
+	path, _ := launcher.LookPath()
+	u := launcher.New().Bin(path).Headless(Headless).MustLaunch()
+	browser := rod.New().ControlURL(u).MustConnect()
+	defer browser.MustClose()
+	page := browser.MustPage()
+
+	res, err := GetManyDocPostgres("SELECT * FROM job_listings WHERE updated_at > now() - interval '7 days'")
+	if err != nil {
+		LogError("Unable to get data from Postgres, check logs", err)
+		return
+	}
+
+	del := func(val int, str string) {
+		if err := DeleteDocPostgres("DELETE FROM job_listings WHERE id = $1", val); err != nil {
+			LogError("cannot delete doc in postgres", err)
+		}
+		if _, err := DeleteRedisSetMemeber("posted_job_links", str); err != nil {
+			LogError("cannot delete from redis", err)
+		}
+	}
+
+	for _, jdata := range res {
+		link := jdata.JobURL
+		pageNErr := page.Timeout(30 * time.Second).Navigate(link)
+		if pageNErr != nil {
+			LogError(fmt.Sprintf("error while navigating to page: %s", link), pageNErr)
+			del(jdata.ID, link)
+			continue
+		}
+		if err := page.Timeout(30 * time.Second).WaitLoad(); err != nil {
+			LogError("error while waiting for page to be stable", err)
+			del(jdata.ID, link)
+			continue
+		}
+		u, err := url.Parse(link)
+		if err != nil {
+			LogError("cannot parse url", err)
+			continue
+		}
+		homeDomain := u.Scheme + "://" + u.Host
+		sMap, ok := ScrapeMap[homeDomain]
+		if !ok {
+			LogError(fmt.Sprintf("cannot get ScrapeMap for %s", homeDomain), nil)
+			continue
+		}
+
+		// scrape elements on page
+		da := ScrapperElements(page, sMap)
+		if reflect.DeepEqual(da, jdata) {
+			if e := UpdateDocPostgres("UPDATE job_listings SET updated_at = now() WHERE id = $1", jdata.ID); e != nil {
+				LogError("cannot update doc in postgres", e)
+			}
+		} else {
+			da.ID = jdata.ID
+			da.CreatedAt = jdata.CreatedAt
+			da.UpdatedAt = time.Now()
+			da.ApplicationDeadline = jdata.ApplicationDeadline.AddDate(0, 0, 10)
+			UpdateDocPostgres("UPDATE job_listings SET (job_title, company_name, company_url, job_description, job_type, location, remote_option, salary_min, salary_max, experience_min, experience_max, education_requirements, skills, benefits, job_posting_date, application_deadline, job_url, created_at, updated_at) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)  WHERE id = $20", []interface{}{da.JobTitle, da.CompanyName, da.CompanyURL, da.JobDescription, da.JobType, da.Location, da.RemoteOption, da.SalaryMin, da.SalaryMax, da.ExperienceMin, da.ExperienceMax, da.EducationRequirements, da.Skills, da.Benefits, da.JobPostingDate, da.ApplicationDeadline, da.JobURL, da.CreatedAt, da.UpdatedAt, da.ID})
+		}
+
 	}
 }
 

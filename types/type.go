@@ -58,7 +58,7 @@ type TagField struct {
 
 type PageLinks struct {
 	Link        string `json:"link" bson:"link"`
-	NextPageBtn string `json:"total_pages" bson:"total_pages"`
+	NextPageBtn string `json:"nextPage" bson:"nextPage"`
 	Element     string `json:"element" bson:"element"`
 }
 

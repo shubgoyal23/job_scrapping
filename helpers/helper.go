@@ -28,10 +28,10 @@ func InitLogger() *os.File {
 	return Logger
 }
 
-func InsertMapToMongoDB() {
+func InsertNaukriMapToMongoDB() {
 	var jg types.JobDataScrapeMap
 	jg.Homepage = "https://www.naukri.com"
-	jg.PageLinks = []types.PageLinks{{Link: "https://www.naukri.com/it-jobs-@@@?src=gnbjobs_homepage_srch", NextPageBtn: "#lastCompMark > a:nth-child(4)", Element: "#listContainer > div.styles_job-listing-container__OCfZC > div > div > div > div > a"}}
+	jg.PageLinks = []types.PageLinks{{Link: "https://www.naukri.com/it-jobs-?src=gnbjobs_homepage_srch", NextPageBtn: "#lastCompMark > a:nth-child(4)", Element: "#listContainer > div.styles_job-listing-container__OCfZC > div > div > div > div > a"}}
 
 	var jobData types.JobListingFeilds
 	jobData.JobTitle = types.TagField{Element: ".styles_jd-header-title__rZwM1", TagType: "string", Cleaner: "", AttributeTarget: ""}
@@ -49,6 +49,37 @@ func InsertMapToMongoDB() {
 	jobData.Skills = types.TagField{Element: "div.styles_key-skill__GIPn_ > div > a > span", TagType: "[]string", Cleaner: "", AttributeTarget: ""}
 	jobData.Benefits = types.TagField{Element: ".styles_jhc__benefits__jdfEC", TagType: "string", Cleaner: "", AttributeTarget: ""}
 	jobData.JobPostingDate = types.TagField{Element: "#job_header > div.styles_jhc__bottom__DrTmB > div.styles_jhc__jd-stats__KrId0 > span:nth-child(1) > span", TagType: "date", Cleaner: "", AttributeTarget: ""}
+	jobData.ApplicationDeadline = types.TagField{Element: "", TagType: "date", Cleaner: "", AttributeTarget: ""}
+
+	jg.JobData = jobData
+
+	// Insert the data into MongoDB
+	if err := InsertMongoDB(jg); err != nil {
+		LogError("cannot insert in mongodb", err)
+	}
+}
+
+func InsertFounditMapToMongoDB() {
+	var jg types.JobDataScrapeMap
+	jg.Homepage = "https://www.foundit.in"
+	jg.PageLinks = []types.PageLinks{{Link: "https://www.foundit.in/search/it-jobs", NextPageBtn: "#pagination > a > div.arrow-right", Element: "div.srpResultCard > div > div > div > div.cardHead > div > div > h3 > a"}}
+
+	var jobData types.JobListingFeilds
+	jobData.JobTitle = types.TagField{Element: "#jobDetailContainer > div > div > h1", TagType: "string", Cleaner: "", AttributeTarget: ""}
+	jobData.CompanyName = types.TagField{Element: "#jobDetailContainer > div > div > a", TagType: "string", Cleaner: "", AttributeTarget: ""}
+	jobData.CompanyURL = types.TagField{Element: "#jobDetailContainer > div > div > a", TagType: "url", Cleaner: "", AttributeTarget: "href"}
+	jobData.JobDescription = types.TagField{Element: "#jobDescription > div", TagType: "string", Cleaner: "", AttributeTarget: ""}
+	jobData.JobType = types.TagField{Element: "#jobDetailContainer > div > div > p:nth-child(3) > span.font-normal.text-content-secondary > a", TagType: "string", Cleaner: "", AttributeTarget: ""}
+	jobData.Location = types.TagField{Element: "#jobDetailContainer > div > div:nth-child(2) > div > a:nth-child(2)", TagType: "string", Cleaner: "", AttributeTarget: ""}
+	jobData.RemoteOption = types.TagField{Element: "", TagType: "string", Cleaner: "", AttributeTarget: ""}
+	jobData.SalaryMin = types.TagField{Element: "", TagType: "range", Cleaner: "[^0-9.-]+", AttributeTarget: ""}
+	jobData.SalaryMax = types.TagField{Element: "", TagType: "range", Cleaner: "[^0-9.-]+", AttributeTarget: ""}
+	jobData.ExperienceMin = types.TagField{Element: "#jobDetailContainer > div > div > div > span:nth-child(2)", TagType: "range", Cleaner: "[^0-9.-]+", AttributeTarget: ""}
+	jobData.ExperienceMax = types.TagField{Element: "#jobDetailContainer > div > div > div > span:nth-child(2)", TagType: "range", Cleaner: "[^0-9.-]+", AttributeTarget: ""}
+	jobData.EducationRequirements = types.TagField{Element: "", TagType: "[]string", Cleaner: "", AttributeTarget: ""}
+	jobData.Skills = types.TagField{Element: "#skillSectionNew > div.flex.flex-wrap > div", TagType: "[]string", Cleaner: "", AttributeTarget: ""}
+	jobData.Benefits = types.TagField{Element: "", TagType: "string", Cleaner: "", AttributeTarget: ""}
+	jobData.JobPostingDate = types.TagField{Element: "#jobDetailContainer > div > div > div > ul > li:nth-child(1) > span", TagType: "date", Cleaner: "", AttributeTarget: ""}
 	jobData.ApplicationDeadline = types.TagField{Element: "", TagType: "date", Cleaner: "", AttributeTarget: ""}
 
 	jg.JobData = jobData

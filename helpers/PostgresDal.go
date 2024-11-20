@@ -76,3 +76,21 @@ func GetManyDocPostgres(query string) ([]types.JobListing, error) {
 	}
 	return val, nil
 }
+
+func DeleteDocPostgres(query string, val int) error {
+	_, err := postgresConn.Exec(context.Background(), query, val)
+	if err != nil {
+		LogError("cannot delete doc in postgres", err)
+		return err
+	}
+	return nil
+}
+
+func UpdateDocPostgres(query string, val interface{}) error {
+	_, err := postgresConn.Exec(context.Background(), query, val)
+	if err != nil {
+		LogError("cannot update doc in postgres", err)
+		return err
+	}
+	return nil
+}
