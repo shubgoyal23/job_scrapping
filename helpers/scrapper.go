@@ -12,12 +12,19 @@ import (
 	"time"
 
 	"github.com/go-rod/rod"
-	"github.com/go-rod/rod/lib/launcher"
 )
 
 var UniqueTags = make(chan string, 500) // chan to store unique tags
-var Headless = true                     // to run in headless mode
+var Headless = false                    // to run in headless mode
 var ScrapeMap = make(map[string]types.JobDataScrapeMap)
+
+// get browser
+func GetBrowser() *rod.Browser {
+	// path, _ := launcher.LookPath()
+	// u := launcher.New().Bin(path).Headless(Headless).MustLaunch()
+	browser := rod.New().MustConnect()
+	return browser
+}
 
 // this function collects all the data from the page
 func ScrapperElements(page *rod.Page, jobDMap types.JobDataScrapeMap) types.JobListing {
@@ -158,9 +165,7 @@ func LinkDupper(jobMap types.JobDataScrapeMap) {
 	}()
 	LogError(fmt.Sprintf("running linkDuper for %s scrapper at time: %s", jobMap.Homepage, time.Now().String()), nil)
 
-	path, _ := launcher.LookPath()
-	u := launcher.New().Bin(path).Headless(Headless).MustLaunch()
-	browser := rod.New().ControlURL(u).MustConnect()
+	browser := GetBrowser()
 	defer browser.MustClose()
 
 	page := browser.MustPage(jobMap.Homepage).MustWaitStable()
@@ -219,9 +224,8 @@ func GetDataFromLink() {
 			LogError(fmt.Sprintf("GetDataFromLink crashed because %s", r), nil)
 		}
 	}()
-	path, _ := launcher.LookPath()
-	u := launcher.New().Bin(path).Headless(Headless).MustLaunch()
-	browser := rod.New().ControlURL(u).MustConnect()
+
+	browser := rod.New().MustConnect()
 	defer browser.MustClose()
 	page := browser.MustPage()
 
@@ -316,9 +320,8 @@ func UpdateDataFromLink() {
 			LogError(fmt.Sprintf("updateDataFromLink crashed because %s", r), nil)
 		}
 	}()
-	path, _ := launcher.LookPath()
-	u := launcher.New().Bin(path).Headless(Headless).MustLaunch()
-	browser := rod.New().ControlURL(u).MustConnect()
+
+	browser := rod.New().MustConnect()
 	defer browser.MustClose()
 	page := browser.MustPage()
 
