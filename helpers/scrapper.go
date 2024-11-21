@@ -12,18 +12,26 @@ import (
 	"time"
 
 	"github.com/go-rod/rod"
+	"github.com/go-rod/rod/lib/launcher"
 )
 
 var UniqueTags = make(chan string, 500) // chan to store unique tags
 var Headless = false                    // to run in headless mode
 var ScrapeMap = make(map[string]types.JobDataScrapeMap)
+var Browser *rod.Browser
 
 // get browser
-func GetBrowser() *rod.Browser {
-	// path, _ := launcher.LookPath()
-	// u := launcher.New().Bin(path).Headless(Headless).MustLaunch()
-	browser := rod.New().MustConnect()
-	return browser
+func InitBrowser() bool {
+	// rodEndpoint := os.Getenv("ROD_ENDPOINT")
+	// if rodEndpoint == "" {
+	// 	LogError("ROD_ENDPOINT is not set", nil)
+	// 	return false
+	// }
+	u := launcher.New().Headless(Headless).MustLaunch()
+	browser := rod.New().ControlURL(u).MustConnect()
+	browser.MustPage()
+	Browser = browser
+	return true
 }
 
 // this function collects all the data from the page
@@ -165,10 +173,8 @@ func LinkDupper(jobMap types.JobDataScrapeMap) {
 	}()
 	LogError(fmt.Sprintf("running linkDuper for %s scrapper at time: %s", jobMap.Homepage, time.Now().String()), nil)
 
-	browser := GetBrowser()
-	defer browser.MustClose()
-
-	page := browser.MustPage(jobMap.Homepage).MustWaitStable()
+	page := Browser.MustPage(jobMap.Homepage).MustWaitStable()
+	defer page.Close()
 
 	AllTags := make(map[string]bool)
 	for _, pl := range jobMap.PageLinks {
@@ -225,9 +231,8 @@ func GetDataFromLink() {
 		}
 	}()
 
-	browser := rod.New().MustConnect()
-	defer browser.MustClose()
-	page := browser.MustPage()
+	page := Browser.MustPage()
+	defer page.Close()
 
 	var JobD struct {
 		mu       sync.Mutex
@@ -321,9 +326,8 @@ func UpdateDataFromLink() {
 		}
 	}()
 
-	browser := rod.New().MustConnect()
-	defer browser.MustClose()
-	page := browser.MustPage()
+	page := Browser.MustPage()
+	defer page.Close()
 
 	res, err := GetManyDocPostgres("SELECT * FROM job_listings WHERE updated_at > now() - interval '7 days'")
 	if err != nil {
