@@ -27,7 +27,8 @@ func InitBrowser() bool {
 	// 	LogError("ROD_ENDPOINT is not set", nil)
 	// 	return false
 	// }
-	u := launcher.New().Headless(Headless).MustLaunch()
+	path, _ := launcher.LookPath()
+	u := launcher.New().Bin(path).Headless(false).MustLaunch()
 	browser := rod.New().ControlURL(u).MustConnect()
 	browser.MustPage()
 	Browser = browser
