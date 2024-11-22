@@ -36,19 +36,38 @@ func InitRediGo(r string, pwd string) error {
 }
 
 // insert data in redis list
-func InsertRedisList(key string, val string) (bool, error) {
+func InsertRedisListLPush(key string, val []string) error {
 	rc := RedigoConn.Get()
 	defer rc.Close()
 	if _, er := rc.Do("PING"); er != nil {
 		LogError("Redis not connected", er)
-		return false, er
+		return er
 	}
-	_, err := rc.Do("LPUSH", key, val)
+	ar := redis.Args{}.Add(key).AddFlat(val)
+	_, err := rc.Do("LPUSH", ar...)
 	if err != nil {
 		LogError(fmt.Sprintf("cannot insert in redis list key: %s with value: %s", key, val), err)
-		return false, err
+		return err
 	}
-	return true, nil
+	return nil
+}
+
+// insert data in redis list
+func GetRedisListRPOP(key string, n int) ([][]byte, error) {
+	r := [][]byte{}
+	rc := RedigoConn.Get()
+	defer rc.Close()
+	if _, er := rc.Do("PING"); er != nil {
+		LogError("Redis not connected", er)
+		return r, er
+	}
+	res, err := redis.ByteSlices(rc.Do("RPOP", key, n))
+	if err != nil {
+		LogError(fmt.Sprintf("Cannot get items from redis list key: %s", key), err)
+		return r, err
+	}
+	r = append(r, res...)
+	return r, nil
 }
 
 // insert data in redis set

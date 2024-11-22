@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"context"
 	"fmt"
 	"nScrapper/types"
 	"net/url"
@@ -15,8 +16,7 @@ import (
 	"github.com/go-rod/rod/lib/launcher"
 )
 
-var UniqueTags = make(chan string, 500) // chan to store unique tags
-var Headless = true                     // to run in headless mode
+var Headless = true // to run in headless mode
 var ScrapeMap = make(map[string]types.JobDataScrapeMap)
 var Browser *rod.Browser
 
@@ -178,6 +178,7 @@ func LinkDupper(jobMap types.JobDataScrapeMap) {
 	defer page.Close()
 
 	AllTags := make(map[string]bool)
+	links := []string{}
 	for _, pl := range jobMap.PageLinks {
 		pageNErr := page.Navigate(pl.Link)
 		if pageNErr != nil {
@@ -185,7 +186,7 @@ func LinkDupper(jobMap types.JobDataScrapeMap) {
 			continue
 		}
 		for {
-			if err := page.Timeout(30*time.Second).WaitDOMStable(2*time.Second, 5); err != nil {
+			if err := page.Timeout(30*time.Second).WaitDOMStable(10*time.Second, 5); err != nil {
 				LogError("error while waiting for page to be stable", err)
 				break
 			}
@@ -205,10 +206,19 @@ func LinkDupper(jobMap types.JobDataScrapeMap) {
 				if lk == "" {
 					continue
 				}
+				if _, ok := AllTags[lk]; ok {
+					continue
+				}
 				AllTags[lk] = true
-				UniqueTags <- lk
+				links = append(links, lk)
+				if len(links) >= 100 {
+					if err := InsertRedisListLPush("job_links", links); err != nil {
+						LogError("cannot insert in redis list", err)
+					} else {
+						links = []string{}
+					}
+				}
 			}
-
 			// next button click
 			nextBtn, nextBtnErr := page.Timeout(30 * time.Second).Element(pl.NextPageBtn)
 			if nextBtnErr != nil {
@@ -220,6 +230,7 @@ func LinkDupper(jobMap types.JobDataScrapeMap) {
 				LogError(fmt.Sprintf("error while clicking next page button from page: %s, element: %s, err:", pl.Link, pl.NextPageBtn), nextBtnErr)
 				break
 			}
+			time.Sleep(time.Second * 2)
 		}
 	}
 }
@@ -240,81 +251,96 @@ func GetDataFromLink() {
 		JobData  []types.JobListing
 		JobLinks []string
 	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	// every hour insert data
-	go func() {
-		for range time.Tick(time.Hour * 1) {
+	go func(ctx context.Context) {
+		select {
+		case <-time.Tick(time.Hour * 1):
 			JobD.mu.Lock()
-			if len(JobD.JobData) == 0 {
+			if len(JobD.JobData) != 0 {
+				if fres, err := InsertBulkDataPostgres(JobD.JobData); err != nil {
+					LogError("cannot insert job data", err)
+				} else {
+					if len(fres) > 0 {
+						InsertRedisSetBulk("Failde_posted_job_links", fres)
+					}
+					InsertRedisSetBulk("posted_job_links", JobD.JobLinks)
+				}
+				JobD.JobData = []types.JobListing{}
+				JobD.JobLinks = []string{}
 				JobD.mu.Unlock()
+			}
+			JobD.mu.Unlock()
+		case <-ctx.Done():
+			LogError("GetDataFromLink context done", nil)
+			return
+		}
+	}(ctx)
+
+	for {
+		UniqueTags, err := GetRedisListRPOP("job_links", 100)
+		if err != nil {
+			LogError("cannot get from redis", err)
+			return
+		}
+
+		for _, d := range UniqueTags {
+			link := string(d)
+			// check if link exists in redis
+			if f, err := CheckRedisSetMemeber("posted_job_links", link); err != nil {
+				LogError("cannot get from redis", err)
+				continue
+			} else if f {
 				continue
 			}
-			if fres, err := InsertBulkDataPostgres(JobD.JobData); err != nil {
-				LogError("cannot insert job data", err)
-			} else {
-				if len(fres) > 0 {
-					InsertRedisSetBulk("Failde_posted_job_links", fres)
-				}
-				InsertRedisSetBulk("posted_job_links", JobD.JobLinks)
+			pageNErr := page.Timeout(30 * time.Second).Navigate(link)
+			if pageNErr != nil {
+				LogError(fmt.Sprintf("error while navigating to page: %s", link), pageNErr)
+				continue
 			}
-			JobD.JobData = []types.JobListing{}
-			JobD.JobLinks = []string{}
-			JobD.mu.Unlock()
-		}
-	}()
+			if err := page.Timeout(30 * time.Second).WaitLoad(); err != nil {
+				LogError("error while waiting for page to be stable", err)
+				continue
+			}
+			u, err := url.Parse(link)
+			if err != nil {
+				LogError("cannot parse url", err)
+				continue
+			}
+			homeDomain := u.Scheme + "://" + u.Host
+			sMap, ok := ScrapeMap[homeDomain]
+			if !ok {
+				LogError(fmt.Sprintf("cannot get ScrapeMap for %s", homeDomain), nil)
+				continue
+			}
 
-	for link := range UniqueTags {
-		// check if link exists in redis
-		if f, err := CheckRedisSetMemeber("posted_job_links", link); err != nil {
-			LogError("cannot get from redis", err)
-			continue
-		} else if f {
-			continue
-		}
-		pageNErr := page.Timeout(30 * time.Second).Navigate(link)
-		if pageNErr != nil {
-			LogError(fmt.Sprintf("error while navigating to page: %s", link), pageNErr)
-			continue
-		}
-		if err := page.Timeout(30 * time.Second).WaitLoad(); err != nil {
-			LogError("error while waiting for page to be stable", err)
-			continue
-		}
-		u, err := url.Parse(link)
-		if err != nil {
-			LogError("cannot parse url", err)
-			continue
-		}
-		homeDomain := u.Scheme + "://" + u.Host
-		sMap, ok := ScrapeMap[homeDomain]
-		if !ok {
-			LogError(fmt.Sprintf("cannot get ScrapeMap for %s", homeDomain), nil)
-			continue
-		}
-
-		// scrape elements on page
-		da := ScrapperElements(page, sMap)
-		da.JobURL = link
-		da.ApplicationDeadline = da.JobPostingDate.AddDate(0, 0, 30)
-		da.CreatedAt = time.Now()
-		da.UpdatedAt = time.Now()
-		JobD.mu.Lock()
-		JobD.JobData = append(JobD.JobData, da)
-		JobD.JobLinks = append(JobD.JobLinks, link)
-		JobD.mu.Unlock()
-		if len(JobD.JobData) == 100 {
+			// scrape elements on page
+			da := ScrapperElements(page, sMap)
+			da.JobURL = link
+			da.ApplicationDeadline = da.JobPostingDate.AddDate(0, 0, 30)
+			da.CreatedAt = time.Now()
+			da.UpdatedAt = time.Now()
 			JobD.mu.Lock()
-			if fres, err := InsertBulkDataPostgres(JobD.JobData); err != nil {
-				LogError("cannot insert job data", err)
-			} else {
-				if len(fres) > 0 {
-					InsertRedisSetBulk("Failde_posted_job_links", fres)
-				}
-				InsertRedisSetBulk("posted_job_links", JobD.JobLinks)
-			}
-			JobD.JobData = []types.JobListing{}
-			JobD.JobLinks = []string{}
+			JobD.JobData = append(JobD.JobData, da)
+			JobD.JobLinks = append(JobD.JobLinks, link)
 			JobD.mu.Unlock()
+			if len(JobD.JobData) == 100 {
+				JobD.mu.Lock()
+				if fres, err := InsertBulkDataPostgres(JobD.JobData); err != nil {
+					LogError("cannot insert job data", err)
+				} else {
+					if len(fres) > 0 {
+						InsertRedisSetBulk("Failde_posted_job_links", fres)
+					}
+					InsertRedisSetBulk("posted_job_links", JobD.JobLinks)
+				}
+				JobD.JobData = []types.JobListing{}
+				JobD.JobLinks = []string{}
+				JobD.mu.Unlock()
+			}
+			time.Sleep(time.Second * 2)
 		}
 	}
 }

@@ -68,6 +68,7 @@ func main() {
 			helpers.LinkDupper(v)
 		}
 		for range time.Tick(time.Hour * 12) {
+			go helpers.GetDataFromLink()
 			for _, v := range helpers.ScrapeMap {
 				helpers.LinkDupper(v)
 				time.Sleep(time.Hour * 1)
