@@ -28,7 +28,7 @@ func InitBrowser() bool {
 	// 	return false
 	// }
 	path, _ := launcher.LookPath()
-	u := launcher.New().Bin(path).Headless(false).MustLaunch()
+	u := launcher.New().Bin(path).Headless(Headless).MustLaunch()
 	browser := rod.New().ControlURL(u).MustConnect()
 	browser.MustPage()
 	Browser = browser

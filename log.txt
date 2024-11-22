@@ -1,1 +1,27 @@
-2024-11-20 17:01:41: running linkDuper for https://www.foundit.in scrapper at time: 2024-11-20 17:01:41.2709486 +0530 IST m=+2.941310501
+2024-11-22 11:36:44: running linkDuper for https://www.foundit.in scrapper at time: 2024-11-22 11:36:44.549243337 +0530 IST m=+4.427804713
+2024-11-22 11:36:56.739512841 +0530 IST m=+16.618074223: error while clicking next page button from page: https://www.foundit.in/search/it-jobs, element: #pagination > a > div.arrow-right, err: context canceled
+2024-11-22 11:36:56: running linkDuper for https://www.naukri.com scrapper at time: 2024-11-22 11:36:56.739703715 +0530 IST m=+16.618265092
+2024-11-22 11:37:04.260824351 +0530 IST m=+24.139385728: error while waiting for page to be stable context canceled
+2024-11-22 11:37:04: running linkDuper for https://in.indeed.com scrapper at time: 2024-11-22 11:37:04.261054224 +0530 IST m=+24.139615600
+2024-11-22 11:37:13.05516273 +0530 IST m=+32.933724101: error while getting next page button from page: https://in.indeed.com/jobs?q=backend+developer, element: #jobsearch-JapanPage > div > div.css-hyhnne.e37uo190 > div > div.css-pprl14.eu4oa1w0 > nav > ul > li > a.css-akkh0a.e8ju0x50[label=Next Page], err: eval js error: SyntaxError: Failed to execute 'querySelector' on 'Document': '#jobsearch-JapanPage > div > div.css-hyhnne.e37uo190 > div > div.css-pprl14.eu4oa1w0 > nav > ul > li > a.css-akkh0a.e8ju0x50[label=Next Page]' is not a valid selector.
+    at functions.element (<anonymous>:1:93)
+    at <anonymous>:1:70
+    at <anonymous>:1:91 <nil>
+2024-11-22 11:37:30.108225893 +0530 IST m=+49.986787368: error while navigating to page: https://www.foundit.in/job/playwright-doelsoft-it-services-inc-delhi-33189586 context canceled
+2024-11-22 11:37:31.234833618 +0530 IST m=+51.113395100: error while navigating to page: https://www.foundit.in/job/sap-s4-data-mitgration-consultant-burgeon-it-services-private-limited-bengaluru-bangalore-33193165 context canceled
+2024-11-22 11:37:32.097577043 +0530 IST m=+51.976138505: error while navigating to page: https://www.foundit.in/job/qa-tools-tosca-neoload-veracode-qtest-burgeon-it-services-private-limited-hyderabad-secunderabad-telangana-33193364 context canceled
+2024-11-22 11:37:32.911620295 +0530 IST m=+52.790181738: error while navigating to page: https://www.foundit.in/job/sap-grc-pc-burgeon-it-services-private-limited-hyderabad-secunderabad-telangana-33164437 context canceled
+2024-11-22 11:37:33.792195388 +0530 IST m=+53.670756869: error while navigating to page: https://www.foundit.in/job/sap-ewm-functional-consultant-burgeon-it-services-private-limited-hyderabad-secunderabad-telangana-33199378 context canceled
+2024-11-22 11:37:34.810686954 +0530 IST m=+54.689248412: error while navigating to page: https://www.foundit.in/job/sap-blackline-burgeon-it-services-private-limited-hyderabad-secunderabad-telangana-33200077 context canceled
+2024-11-22 11:37:35.843772439 +0530 IST m=+55.722333944: error while navigating to page: https://www.foundit.in/job/senior-react-js-engineer-gkm-it-udaipur-33207687 context canceled
+2024-11-22 11:37:36.763477522 +0530 IST m=+56.642038891: error while navigating to page: https://www.foundit.in/job/web-content-writer-pristine-it-code-pvt-ltd-india-33189771 context canceled
+2024-11-22 11:37:37.584585388 +0530 IST m=+57.463146846: error while navigating to page: https://www.foundit.in/job/sap-btp-cpi-solution-architect-burgeon-it-services-private-limited-hyderabad-secunderabad-telangana-33215055 context canceled
+2024-11-22 11:37:38.527990434 +0530 IST m=+58.406551882: error while navigating to page: https://www.foundit.in/job/require-male-sales-executive-goshamahal-squircle-it-consulting-services-private-limited-hyderabad-secunderabad-telangana-33171567 context canceled
+2024-11-22 11:37:39.408422364 +0530 IST m=+59.286983840: error while navigating to page: https://www.foundit.in/job/service-now-developer-burgeon-it-services-private-limited-hyderabad-secunderabad-telangana-33193330 context canceled
+2024-11-22 11:37:41.508647486 +0530 IST m=+61.387208942: error while navigating to page: https://www.foundit.in/job/service-now-developer-burgeon-it-services-private-limited-hyderabad-secunderabad-telangana-33193231 context canceled
+2024-11-22 11:37:42.40083892 +0530 IST m=+62.279400363: error while navigating to page: https://www.foundit.in/job/sap-blackline-burgeon-it-services-private-limited-hyderabad-secunderabad-telangana-33164845 context canceled
+2024-11-22 11:37:43.525624629 +0530 IST m=+63.404186081: error while navigating to page: https://www.foundit.in/job/service-now-developer-burgeon-it-services-private-limited-hyderabad-secunderabad-telangana-33193274 context canceled
+2024-11-22 11:37:44.437546775 +0530 IST m=+64.316108217: error while navigating to page: https://in.indeed.com/pagead/clk context canceled
+2024-11-22 11:37:45.308101942 +0530 IST m=+65.186663420: error while navigating to page: https://in.indeed.com/pagead/clk context canceled
+2024-11-22 11:37:46.169849406 +0530 IST m=+66.048410917: error while navigating to page: https://in.indeed.com/rc/clk context canceled
+2024-11-22 11:37:47.20570783 +0530 IST m=+67.084269318: error while navigating to page: https://in.indeed.com/rc/clk context canceled

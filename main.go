@@ -44,7 +44,6 @@ func main() {
 		helpers.LogError("Unable to connect to Browser, check logs", nil)
 		return
 	}
-
 	m, err := helpers.GetManyDocMongoDB("jobsScrapeMap", bson.M{})
 	if err != nil {
 		helpers.LogError("Unable to get data from MongoDB, check logs", err)
