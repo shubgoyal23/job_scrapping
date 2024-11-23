@@ -270,7 +270,6 @@ func GetDataFromLink() {
 				}
 				JobD.JobData = []types.JobListing{}
 				JobD.JobLinks = []string{}
-				JobD.mu.Unlock()
 			}
 			JobD.mu.Unlock()
 		case <-ctx.Done():
