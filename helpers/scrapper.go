@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"nScrapper/types"
 	"net/url"
+	"os"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -16,17 +17,16 @@ import (
 	"github.com/go-rod/rod/lib/launcher"
 )
 
-var Headless = true // to run in headless mode
 var ScrapeMap = make(map[string]types.JobDataScrapeMap)
 var Browser *rod.Browser
 
 // get browser
 func InitBrowser() bool {
-	// rodEndpoint := os.Getenv("ROD_ENDPOINT")
-	// if rodEndpoint == "" {
-	// 	LogError("ROD_ENDPOINT is not set", nil)
-	// 	return false
-	// }
+	var Headless = true
+	h := os.Getenv("Headless")
+	if h != "" {
+		Headless = false
+	}
 	path, _ := launcher.LookPath()
 	u := launcher.New().Bin(path).Headless(Headless).MustLaunch()
 	browser := rod.New().ControlURL(u).MustConnect()

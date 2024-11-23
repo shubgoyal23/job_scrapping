@@ -68,6 +68,7 @@ func main() {
 			helpers.LinkDupper(v)
 		}
 		for range time.Tick(time.Hour * 12) {
+			helpers.LogError(fmt.Sprintf("running Round trip at time: %s", time.Now().String()), nil)
 			go helpers.GetDataFromLink()
 			for _, v := range helpers.ScrapeMap {
 				helpers.LinkDupper(v)
