@@ -63,17 +63,22 @@ func main() {
 		helpers.ScrapeMap[data.Homepage] = data
 	}
 	go helpers.GetDataFromLink()
+	for _, v := range helpers.ScrapeMap {
+		helpers.LinkDupper(v)
+	}
 	go func() {
-		for _, v := range helpers.ScrapeMap {
-			helpers.LinkDupper(v)
-		}
 		for range time.Tick(time.Hour * 12) {
-			helpers.LogError(fmt.Sprintf("running Round trip at time: %s", time.Now().String()), nil)
-			go helpers.GetDataFromLink()
+			helpers.LogError(fmt.Sprintf("running Round trip of 12 hours at time: %s", time.Now().String()), nil)
 			for _, v := range helpers.ScrapeMap {
 				helpers.LinkDupper(v)
 				time.Sleep(time.Hour * 1)
 			}
+		}
+	}()
+	go func() {
+		for range time.Tick(time.Hour * 1) {
+			helpers.LogError(fmt.Sprintf("running Round trip of 1 hours at time: %s", time.Now().String()), nil)
+			helpers.GetDataFromLink()
 		}
 	}()
 
