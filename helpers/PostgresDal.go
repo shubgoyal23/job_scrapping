@@ -28,7 +28,7 @@ func InitPostgresDataBase() error {
 }
 
 func CreateTablePostgres() error {
-	if _, err := postgresConn.Exec(context.Background(), "CREATE TABLE IF NOT EXISTS job_listings (id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, job_title VARCHAR(255) NOT NULL, company_name VARCHAR(255) NOT NULL, company_url VARCHAR(255), job_description TEXT NOT NULL, job_type VARCHAR(50), location VARCHAR(255) NOT NULL, remote_option BOOLEAN DEFAULT FALSE, salary_min DECIMAL(10, 2), salary_max DECIMAL(10, 2), experience_min INT, experience_max INT, education_requirements TEXT[], skills TEXT[], benefits TEXT[], job_posting_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, application_deadline TIMESTAMP, job_url VARCHAR(255) NOT NULL UNIQUE, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);"); err != nil {
+	if _, err := postgresConn.Exec(context.Background(), "CREATE TABLE IF NOT EXISTS job_listings (id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, job_title VARCHAR(255) NOT NULL, company_name VARCHAR(255) NOT NULL, company_url VARCHAR(255), job_description TEXT NOT NULL, job_type VARCHAR(225), location VARCHAR(255) NOT NULL, remote_option BOOLEAN DEFAULT FALSE, salary_min DECIMAL(10, 2), salary_max DECIMAL(10, 2), experience_min INT, experience_max INT, education_requirements TEXT[], skills TEXT[], benefits TEXT[], job_posting_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, application_deadline TIMESTAMP, job_url VARCHAR(255) NOT NULL UNIQUE, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, is_active BOOLEAN DEFAULT TRUE);"); err != nil {
 		LogError("cannot create table", err)
 		return err
 	}
