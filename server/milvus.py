@@ -6,7 +6,7 @@ import os
 from pymilvus import model
 load_dotenv()
 
-client = MilvusClient(uri='https://in03-e4126cc3a26c242.serverless.gcp-us-west1.cloud.zilliz.com', token='bf6dc731bfdffa578bb27a05241017bc478d64ba4a06e6c3107c6c575db352990f8516086ea8f77bec9ad00baca57813b33fbf2b')
+client = MilvusClient(uri='', token='')
 
 sentence_transformer_ef = model.dense.SentenceTransformerEmbeddingFunction(
     model_name='multi-qa-mpnet-base-cos-v1', # Specify the model name
