@@ -93,7 +93,7 @@ func InsertIndeedMapToMongoDB() {
 	var jg types.JobDataScrapeMap
 	var jobData types.JobListingFeilds
 	jg.Homepage = "https://in.indeed.com"
-	jg.PageLinks = []types.PageLinks{{Link: "https://in.indeed.com/jobs?q=backend+developer", NextPageBtn: "#jobsearch-JapanPage > div > div.css-hyhnne.e37uo190 > div > div.css-pprl14.eu4oa1w0 > nav > ul > li > a.css-akkh0a.e8ju0x50[label=Next Page]", Element: "h2.jobTitle > a"}}
+	jg.PageLinks = []types.PageLinks{{Link: "https://in.indeed.com/jobs?q=backend+developer", NextPageBtn: "a[data-testid=pagination-page-next]", Element: "h2.jobTitle > a"}}
 
 	jobData.JobTitle = types.TagField{Element: "div.jobsearch-JobInfoHeader-title-container.css-bbq8li.eu4oa1w0 > h1 > span", TagType: "string", Cleaner: "", AttributeTarget: ""}
 	jobData.CompanyName = types.TagField{Element: "#viewJobSSRRoot > div.fastviewjob.jobsearch-ViewJobLayout--standalone.css-r07ztj.eu4oa1w0.hydrated > div.css-1quav7f.eu4oa1w0 > div > div > div.jobsearch-JobComponent.css-u4y1in.eu4oa1w0 > div.jobsearch-InfoHeaderContainer.jobsearch-DesktopStickyContainer.css-zt53js.eu4oa1w0 > div:nth-child(1) > div.css-1moflg3.eu4oa1w0 > div > div > div > div.css-1h46us2.eu4oa1w0 > div > span > a", TagType: "string", Cleaner: "", AttributeTarget: ""}
