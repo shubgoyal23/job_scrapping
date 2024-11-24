@@ -259,7 +259,7 @@ func GetDataFromLink() {
 			LogError(fmt.Sprintf("GetDataFromLink crashed because %s", r), nil)
 		}
 	}()
-
+	LogError(fmt.Sprintf("running GetDataFromLink at time: %s", time.Now().String()), nil)
 	// page := Browser.MustPage()
 	page := stealth.MustPage(Browser)
 	defer page.Close()
