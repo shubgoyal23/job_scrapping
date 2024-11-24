@@ -3,6 +3,7 @@ package helpers
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"nScrapper/types"
 	"net/url"
 	"os"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
+	"github.com/go-rod/stealth"
 )
 
 var ScrapeMap = make(map[string]types.JobDataScrapeMap)
@@ -174,7 +176,8 @@ func LinkDupper(jobMap types.JobDataScrapeMap) {
 	}()
 	LogError(fmt.Sprintf("running linkDuper for %s scrapper at time: %s", jobMap.Homepage, time.Now().String()), nil)
 
-	page := Browser.MustPage(jobMap.Homepage).MustWaitStable()
+	// page := Browser.MustPage(jobMap.Homepage).MustWaitStable()
+	page := stealth.MustPage(Browser)
 	defer page.Close()
 
 	AllTags := make(map[string]bool)
@@ -220,17 +223,31 @@ func LinkDupper(jobMap types.JobDataScrapeMap) {
 				}
 			}
 			// next button click
-			nextBtn, nextBtnErr := page.Timeout(30 * time.Second).Element(pl.NextPageBtn)
+			nextBtn, nextBtnErr := page.Timeout(10 * time.Second).Element(pl.NextPageBtn)
 			if nextBtnErr != nil {
 				LogError(fmt.Sprintf("error while getting next page button from page: %s, element: %s, err:", pl.Link, pl.NextPageBtn), nextBtnErr)
 				break
+				// frame := page.MustElements("iframe")
+				// for _, f := range frame {
+				// 	f.MustFrame()
+				// 	checkbox, err := f.Element(`#PNSoX8 > div > label > input[type=checkbox]`)
+				// 	if err != nil {
+				// 		LogError(fmt.Sprintf("error while getting next page button from page: %s, element: %s, err:", pl.Link, pl.NextPageBtn), err)
+				// 		continue
+				// 	}
+				// 	if err := checkbox.Click("left", 1); err != nil {
+				// 		LogError(fmt.Sprintf("error while clicking next page button from page: %s, element: %s, err:", pl.Link, pl.NextPageBtn), err)
+				// 		continue
+				// 	}
+				// }
+
 			}
 			nextBtnErr = nextBtn.Click("left", 1)
 			if nextBtnErr != nil {
 				LogError(fmt.Sprintf("error while clicking next page button from page: %s, element: %s, err:", pl.Link, pl.NextPageBtn), nextBtnErr)
 				break
 			}
-			time.Sleep(time.Second * 2)
+			RandTimeSleep(10)
 		}
 	}
 }
@@ -243,7 +260,8 @@ func GetDataFromLink() {
 		}
 	}()
 
-	page := Browser.MustPage()
+	// page := Browser.MustPage()
+	page := stealth.MustPage(Browser)
 	defer page.Close()
 
 	var JobD struct {
@@ -254,28 +272,24 @@ func GetDataFromLink() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// every hour insert data
+	// insert data if crashed
 	go func(ctx context.Context) {
-		select {
-		case <-time.Tick(time.Hour * 1):
-			JobD.mu.Lock()
-			if len(JobD.JobData) != 0 {
-				if fres, err := InsertBulkDataPostgres(JobD.JobData); err != nil {
-					LogError("cannot insert job data", err)
-				} else {
-					if len(fres) > 0 {
-						InsertRedisSetBulk("Failde_posted_job_links", fres)
-					}
-					InsertRedisSetBulk("posted_job_links", JobD.JobLinks)
+		<-ctx.Done()
+		LogError("GetDataFromLink context done", nil)
+		JobD.mu.Lock()
+		if len(JobD.JobData) != 0 {
+			if fres, err := InsertBulkDataPostgres(JobD.JobData); err != nil {
+				LogError("cannot insert job data", err)
+			} else {
+				if len(fres) > 0 {
+					InsertRedisSetBulk("Failde_posted_job_links", fres)
 				}
-				JobD.JobData = []types.JobListing{}
-				JobD.JobLinks = []string{}
+				InsertRedisSetBulk("posted_job_links", JobD.JobLinks)
 			}
-			JobD.mu.Unlock()
-		case <-ctx.Done():
-			LogError("GetDataFromLink context done", nil)
-			return
+			JobD.JobData = []types.JobListing{}
+			JobD.JobLinks = []string{}
 		}
+		JobD.mu.Unlock()
 	}(ctx)
 
 	for {
@@ -339,7 +353,7 @@ func GetDataFromLink() {
 				JobD.JobLinks = []string{}
 				JobD.mu.Unlock()
 			}
-			time.Sleep(time.Second * 2)
+			RandTimeSleep(10)
 		}
 	}
 }
@@ -352,7 +366,8 @@ func UpdateDataFromLink() {
 		}
 	}()
 
-	page := Browser.MustPage()
+	// page := Browser.MustPage()
+	page := stealth.MustPage(Browser)
 	defer page.Close()
 
 	res, err := GetManyDocPostgres("SELECT * FROM job_listings WHERE updated_at > now() - interval '7 days'")
@@ -462,10 +477,13 @@ func CleanUrl(l string, home_url string) string {
 			return ""
 		}
 		// Check if the cleaned URL matches the regex
-		if re.MatchString(ourl) {
-			return ourl
+		if !re.MatchString(ourl) {
+			return ""
 		}
-		return ""
+		if str.RawQuery != "" {
+			ourl = ourl + "?" + str.RawQuery
+		}
+		return ourl
 	}
 
 	// Ensure the URL uses HTTPS or HTTP
@@ -474,14 +492,25 @@ func CleanUrl(l string, home_url string) string {
 	}
 
 	// Parse the home URL to extract the hostname
-	h, err := url.Parse(home_url)
-	if err != nil || str.Hostname() != h.Hostname() {
-		return "" // Return empty if hostnames do not match or if home_url is invalid
-	}
+	// h, err := url.Parse(home_url)
+	// if err != nil || str.Hostname() != h.Hostname() {
+	// 	return "" // Return empty if hostnames do not match or if home_url is invalid
+	// }
 
 	// Match the URL against the regex
-	if re.MatchString(str.String()) {
-		return str.String() // Valid and cleaned URL
+	if !re.MatchString(str.String()) {
+		return ""
+	}
+	if str.RawQuery != "" {
+		return str.String() + "?" + str.RawQuery
 	}
 	return "" // Return empty if the URL does not match
+}
+
+func RandTimeSleep(i int) {
+	i = i * 1000
+	rand := rand.New((rand.NewSource(time.Now().UnixNano())))
+	r := rand.Intn(i) + 100
+	t := time.Duration(r) * time.Microsecond
+	time.Sleep(time.Microsecond * t)
 }
