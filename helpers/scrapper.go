@@ -188,10 +188,11 @@ func LinkDupper(jobMap types.JobDataScrapeMap) {
 			LogError(fmt.Sprintf("error while navigating to page: %s", pl.Link), pageNErr)
 			continue
 		}
+		errcount := 0
 		for {
 			if err := page.Timeout(30*time.Second).WaitDOMStable(10*time.Second, 5); err != nil {
-				LogError("error while waiting for page to be stable", err)
-				break
+				LogError(fmt.Sprintf("error while waiting for page: %s, element: %s, errorcount : %d, err:", pl.Link, pl.Element, errcount), err)
+				errcount++
 			}
 			aTags, aTagErr := page.Timeout(30 * time.Second).Elements(pl.Element)
 			if aTagErr != nil {
@@ -223,10 +224,10 @@ func LinkDupper(jobMap types.JobDataScrapeMap) {
 				}
 			}
 			// next button click
-			nextBtn, nextBtnErr := page.Timeout(10 * time.Second).Element(pl.NextPageBtn)
+			nextBtn, nextBtnErr := page.Timeout(30 * time.Second).Element(pl.NextPageBtn)
 			if nextBtnErr != nil {
-				LogError(fmt.Sprintf("error while getting next page button from page: %s, element: %s, err:", pl.Link, pl.NextPageBtn), nextBtnErr)
-				break
+				LogError(fmt.Sprintf("error while getting next page button from page: %s, element: %s, errorcount : %d, err:", pl.Link, pl.NextPageBtn, errcount), nextBtnErr)
+				errcount++
 				// frame := page.MustElements("iframe")
 				// for _, f := range frame {
 				// 	f.MustFrame()
@@ -244,10 +245,13 @@ func LinkDupper(jobMap types.JobDataScrapeMap) {
 			}
 			nextBtnErr = nextBtn.Click("left", 1)
 			if nextBtnErr != nil {
-				LogError(fmt.Sprintf("error while clicking next page button from page: %s, element: %s, err:", pl.Link, pl.NextPageBtn), nextBtnErr)
-				break
+				LogError(fmt.Sprintf("error while clicking next page button from page: %s, element: %s, errorcount : %d, err:", pl.Link, pl.NextPageBtn, errcount), nextBtnErr)
+				errcount++
 			}
 			RandTimeSleep(10)
+			if errcount >= 10 {
+				break
+			}
 		}
 	}
 }
