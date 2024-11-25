@@ -19,3 +19,9 @@
 
 # log file
 log.txt
+
+# python
+.venv
+server/.venv/*
+__pycache__
+server/__pycache__/*
