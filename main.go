@@ -62,7 +62,9 @@ func main() {
 		}
 		helpers.ScrapeMap[data.Homepage] = data
 	}
-	go helpers.GetDataFromLink()
+	for i := 0; i < 4; i++ {
+		go helpers.GetDataFromLink()
+	}
 	for _, v := range helpers.ScrapeMap {
 		helpers.LinkDupper(v)
 	}
