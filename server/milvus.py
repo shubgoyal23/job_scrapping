@@ -1,4 +1,3 @@
-from pymilvus import MilvusClient, connections, db
 from pymilvus import connections, FieldSchema, CollectionSchema, DataType, Collection
 from dotenv import load_dotenv
 import os
@@ -6,16 +5,13 @@ import os
 from pymilvus import model
 load_dotenv()
 
-client = MilvusClient(uri='', token='')
+
 
 sentence_transformer_ef = model.dense.SentenceTransformerEmbeddingFunction(
-    model_name='multi-qa-mpnet-base-cos-v1', # Specify the model name
-    device='cpu' # Specify the device to use, e.g., 'cpu' or 'cuda:0'
+    model_name='multi-qa-mpnet-base-cos-v1', 
+    device='cpu'
     )
 
-# database = db.create_database("jobVector")
-# db.using_database("jobVector")
-# print(db.list_database())
 
 host= os.getenv('MILVUSHOST')
 token= os.getenv('MILVUSTOKEN')
@@ -47,21 +43,24 @@ def insert_data(collection, ids, embeddings):
     """
     Insert vector data into the collection.
     """
-    data = [ids, embeddings]
-    collection.insert(data)
-    print(f"Inserted records into the collection '{collection.name}'.")
-
+    data = [ids, embeddings.tolist()]
+    res = collection.insert(data)
+    return res
 def search_vectors(collection, query_vector, top_k=3):
     """
     Search for similar vectors in the collection.
     """
-    collection.load()
+    # collection.load()
     results = collection.search(
-        data=[query_vector],
+        data=query_vector.tolist(),
         anns_field="embedding",
-        param={"metric_type": "L2", "params": {"nprobe": 10}},
+        param={"metric_type": "COSINE", "params": {"nprobe": 10}},
         limit=top_k
     )
     print("Search results:")
     for result in results[0]:
         print(f"ID: {result.id}, Distance: {result.distance}")
+    return results
+        
+connect_to_milvus()
+collection = create_collection("jobVector", 768)

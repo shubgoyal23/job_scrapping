@@ -1,14 +1,10 @@
 from typing import Union
-
 from fastapi import FastAPI, Request
-# from sbert import Get_embeddings
-
-from milvus import sentence_transformer_ef, create_collection, connect_to_milvus, insert_data
-
+from milvus import collection, sentence_transformer_ef, insert_data, search_vectors
+import numpy as np
 
 app = FastAPI()
-connect_to_milvus()
-collection = create_collection("jobVector", 768)
+
 
 
 @app.get("/")
@@ -16,30 +12,34 @@ async def read_root():
     return {"Hello": "World"}
 
 
-@app.get("/items/{item_id}")
-async def read_item(item_id: int, q: Union[str, None] = None):
-    return {"item_id": item_id, "q": q}
-
 @app.post("/vector")
 async def post_vector(req : Request):
     data = await req.json()
-    q = data["query"]
+    q = data["description"]
     id = data["id"]
     if q == None or id == None:
-        return {"data": "error"}
-    # d = Get_embeddings(q)
+        return {"error": "Data is not valid"}
+    if len(q) == 0 or len(id) == 0 or len(q) != len(id):
+        return {"error": "Data is not valid"}
     d = sentence_transformer_ef.encode_documents(q)
-    insert_data(collection, id, d)
-    # print(sentence_transformer_ef.dim, d[0].shape)
-    return {"data": "d"}
+    embeddings = np.array(d)
+    r = insert_data(collection, id, embeddings)
+    print(r)
+    return {"message": {"status": "success", "inserted": r.insert_count, "failed": r.err_count}}
 
 @app.post("/query")
 async def post_vector(req : Request):
     data = await req.json()
     q = data["query"]
-    # d = Get_embeddings(q)
+    if q == None or len(q) == 0:
+        return {"error": "Data is not valid"}
     d = sentence_transformer_ef.encode_queries(q)
-    print(sentence_transformer_ef.dim, d[0].shape)
-    return {"data": "d"}
-    
+    embeddings = np.array(d)
+    res = search_vectors(collection, embeddings, 10)
+    sd = []
+    for result in res[0]:
+        sd.append(result.id)
+    # return {"data": sd}
+    return {"message": {"status": "success", "Ids": sd}}
+
     
