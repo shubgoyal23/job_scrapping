@@ -26,6 +26,7 @@ type JobListing struct {
 	JobURL                string    `json:"job_url"`                // URL to the job listing on the website
 	CreatedAt             time.Time `json:"created_at"`             // Record creation timestamp
 	UpdatedAt             time.Time `json:"updated_at"`             // Record update timestamp
+	IsActive              bool      `json:"is_active"`              // Record update timestamp
 }
 
 type JobListingFeilds struct {

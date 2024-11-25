@@ -87,6 +87,11 @@ func main() {
 			helpers.UpdateDataFromLink()
 		}
 	}()
+	go func() {
+		for range time.Tick(time.Hour * 24) {
+			helpers.PushToMilvus()
+		}
+	}()
 
 	select {}
 }

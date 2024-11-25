@@ -137,3 +137,33 @@ func DeleteRedisSetMemeber(key string, val string) (bool, error) {
 	}
 	return true, nil
 }
+
+func GetRedisKeyVal(key string) (string, error) {
+	rc := RedigoConn.Get()
+	defer rc.Close()
+	if _, er := rc.Do("PING"); er != nil {
+		LogError("Redis not connected", er)
+		return "", er
+	}
+	res, err := redis.String(rc.Do("GET", key))
+	if err != nil {
+		LogError(fmt.Sprintf("cannot get in redis key: %s", key), err)
+		return "", err
+	}
+	return res, nil
+}
+
+func SetRedisKeyVal(key string, val string) error {
+	rc := RedigoConn.Get()
+	defer rc.Close()
+	if _, er := rc.Do("PING"); er != nil {
+		LogError("Redis not connected", er)
+		return er
+	}
+	_, err := rc.Do("SET", key, val)
+	if err != nil {
+		LogError(fmt.Sprintf("cannot set in redis key: %s with value: %s", key, val), err)
+		return err
+	}
+	return nil
+}

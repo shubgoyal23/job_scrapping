@@ -54,27 +54,20 @@ func InsertBulkDataPostgres(val []types.JobListing) ([]string, error) {
 	return failedRecords, nil
 }
 
-func GetManyDocPostgres(query string) ([]types.JobListing, error) {
-	var val []types.JobListing
-	r, err := postgresConn.Query(context.Background(), query)
+func GetManyDocPostgres(query string, vals []interface{}) (pgx.Rows, error) {
+	r, err := postgresConn.Query(context.Background(), query, vals...)
 	if err != nil {
 		LogError("cannot get doc in postgres", err)
+		r.Close()
 		return nil, err
 	}
-	defer r.Close()
 	if r.Err() != nil {
 		LogError("cannot get doc in postgres", r.Err())
-		return nil, r.Err()
+		err := r.Err()
+		r.Close()
+		return nil, err
 	}
-	for r.Next() {
-		var res types.JobListing
-		if err := r.Scan(&res.ID, &res.JobTitle, &res.CompanyName, &res.CompanyURL, &res.JobDescription, &res.JobType, &res.Location, &res.RemoteOption, &res.SalaryMin, &res.SalaryMax, &res.ExperienceMin, &res.ExperienceMax, &res.EducationRequirements, &res.Skills, &res.Benefits, &res.JobPostingDate, &res.ApplicationDeadline, &res.JobURL, &res.CreatedAt, &res.UpdatedAt); err != nil {
-			LogError("cannot decode doc in postgres", err)
-			return nil, err
-		}
-		val = append(val, res)
-	}
-	return val, nil
+	return r, nil
 }
 
 func DeleteDocPostgres(query string, val int) error {

@@ -374,12 +374,21 @@ func UpdateDataFromLink() {
 	page := stealth.MustPage(Browser)
 	defer page.Close()
 
-	res, err := GetManyDocPostgres("SELECT * FROM job_listings WHERE updated_at > now() - interval '7 days'")
+	r, err := GetManyDocPostgres("SELECT * FROM job_listings WHERE updated_at > now() - interval '7 days'", nil)
 	if err != nil {
 		LogError("Unable to get data from Postgres, check logs", err)
 		return
 	}
-
+	defer r.Close()
+	var val []types.JobListing
+	for r.Next() {
+		var res types.JobListing
+		if err := r.Scan(&res.ID, &res.JobTitle, &res.CompanyName, &res.CompanyURL, &res.JobDescription, &res.JobType, &res.Location, &res.RemoteOption, &res.SalaryMin, &res.SalaryMax, &res.ExperienceMin, &res.ExperienceMax, &res.EducationRequirements, &res.Skills, &res.Benefits, &res.JobPostingDate, &res.ApplicationDeadline, &res.JobURL, &res.CreatedAt, &res.UpdatedAt, &res.IsActive); err != nil {
+			LogError("cannot decode doc in postgres", err)
+			continue
+		}
+		val = append(val, res)
+	}
 	del := func(val int, str string) {
 		if err := DeleteDocPostgres("DELETE FROM job_listings WHERE id = $1", val); err != nil {
 			LogError("cannot delete doc in postgres", err)
@@ -389,7 +398,7 @@ func UpdateDataFromLink() {
 		}
 	}
 
-	for _, jdata := range res {
+	for _, jdata := range val {
 		link := jdata.JobURL
 		pageNErr := page.Timeout(30 * time.Second).Navigate(link)
 		if pageNErr != nil {
