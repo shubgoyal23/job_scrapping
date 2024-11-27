@@ -15,7 +15,7 @@ services:
     networks:
       - n_scrapper
     volumes:
-      - ./logsfiles:/app/logs
+      - ./logsfiles:/app/log
 
   milvus-server:
     image: rod-server 
