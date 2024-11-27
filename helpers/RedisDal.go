@@ -15,12 +15,12 @@ func InitRediGo(r string, pwd string) error {
 			conn, err := redis.Dial("tcp", r)
 			if err != nil {
 				//log to local as could not connect to Redis
-				LogError("connection redis", err)
+				LogError("InitRedigo", "connection redis", err)
 				return nil, err
 			}
 			if _, err := conn.Do("AUTH", pwd); err != nil {
 				conn.Close()
-				LogError("connection redis", err)
+				LogError("InitRedigo", "connection redis", err)
 				return nil, err
 			}
 			return conn, nil
@@ -40,13 +40,13 @@ func InsertRedisListLPush(key string, val []string) error {
 	rc := RedigoConn.Get()
 	defer rc.Close()
 	if _, er := rc.Do("PING"); er != nil {
-		LogError("Redis not connected", er)
+		LogError("InsertRedisListLPush", "Redis not connected", er)
 		return er
 	}
 	ar := redis.Args{}.Add(key).AddFlat(val)
 	_, err := rc.Do("LPUSH", ar...)
 	if err != nil {
-		LogError(fmt.Sprintf("cannot insert in redis list key: %s with value: %s", key, val), err)
+		LogError("InsertRedisListLPush", fmt.Sprintf("cannot insert in redis list key: %s with value: %s", key, val), err)
 		return err
 	}
 	return nil
@@ -58,12 +58,12 @@ func GetRedisListRPOP(key string, n int) ([][]byte, error) {
 	rc := RedigoConn.Get()
 	defer rc.Close()
 	if _, er := rc.Do("PING"); er != nil {
-		LogError("Redis not connected", er)
+		LogError("GetRedisListRPOP", "Redis not connected", er)
 		return r, er
 	}
 	res, err := redis.ByteSlices(rc.Do("RPOP", key, n))
 	if err != nil {
-		LogError(fmt.Sprintf("Cannot get items from redis list key: %s", key), err)
+		LogError("GetRedisListRPOP", fmt.Sprintf("Cannot get items from redis list key: %s", key), err)
 		return r, err
 	}
 	r = append(r, res...)
@@ -75,12 +75,12 @@ func InsertRedisSet(key string, val string) (bool, error) {
 	rc := RedigoConn.Get()
 	defer rc.Close()
 	if _, er := rc.Do("PING"); er != nil {
-		LogError("Redis not connected", er)
+		LogError("InsertRedisSet", "Redis not connected", er)
 		return false, er
 	}
 	_, err := rc.Do("SADD", key, val)
 	if err != nil {
-		LogError(fmt.Sprintf("cannot insert in redis set key: %s with value: %s", key, val), err)
+		LogError("InsertRedisSet", fmt.Sprintf("cannot insert in redis set key: %s with value: %s", key, val), err)
 		return false, err
 	}
 	return true, nil
@@ -91,13 +91,13 @@ func InsertRedisSetBulk(key string, val []string) (bool, error) {
 	rc := RedigoConn.Get()
 	defer rc.Close()
 	if _, er := rc.Do("PING"); er != nil {
-		LogError("Redis not connected", er)
+		LogError("InsertRedisSetBulk", "Redis not connected", er)
 		return false, er
 	}
 	ar := redis.Args{}.Add(key).AddFlat(val)
 	_, err := rc.Do("SADD", ar...)
 	if err != nil {
-		LogError(fmt.Sprintf("cannot insert in redis set key: %s with value: %s", key, val), err)
+		LogError("InsertRedisSetBulk", fmt.Sprintf("cannot insert in redis set key: %s with value: %s", key, val), err)
 		return false, err
 	}
 	return true, nil
@@ -108,12 +108,12 @@ func CheckRedisSetMemeber(key string, val string) (bool, error) {
 	rc := RedigoConn.Get()
 	defer rc.Close()
 	if _, er := rc.Do("PING"); er != nil {
-		LogError("Redis not connected", er)
+		LogError("CheckRedisSetMemeber", "Redis not connected", er)
 		return false, er
 	}
 	f, err := rc.Do("SISMEMBER", key, val)
 	if err != nil {
-		LogError(fmt.Sprintf("cannot check in redis set key: %s with value: %s", key, val), err)
+		LogError("CheckRedisSetMemeber", fmt.Sprintf("cannot check in redis set key: %s with value: %s", key, val), err)
 		return false, err
 	}
 	if f.(int64) < 1 {
@@ -127,12 +127,12 @@ func DeleteRedisSetMemeber(key string, val string) (bool, error) {
 	rc := RedigoConn.Get()
 	defer rc.Close()
 	if _, er := rc.Do("PING"); er != nil {
-		LogError("Redis not connected", er)
+		LogError("DeleteRedisSetMemeber", "Redis not connected", er)
 		return false, er
 	}
 	_, err := rc.Do("SREM", key, val)
 	if err != nil {
-		LogError(fmt.Sprintf("cannot delete in redis set key: %s with value: %s", key, val), err)
+		LogError("DeleteRedisSetMemeber", fmt.Sprintf("cannot delete in redis set key: %s with value: %s", key, val), err)
 		return false, err
 	}
 	return true, nil
@@ -142,12 +142,12 @@ func GetRedisKeyVal(key string) (string, error) {
 	rc := RedigoConn.Get()
 	defer rc.Close()
 	if _, er := rc.Do("PING"); er != nil {
-		LogError("Redis not connected", er)
+		LogError("GetRedisKeyVal", "Redis not connected", er)
 		return "", er
 	}
 	res, err := redis.String(rc.Do("GET", key))
 	if err != nil {
-		LogError(fmt.Sprintf("cannot get in redis key: %s", key), err)
+		LogError("GetRedisKeyVal", fmt.Sprintf("cannot get in redis key: %s", key), err)
 		return "", err
 	}
 	return res, nil
@@ -157,12 +157,12 @@ func SetRedisKeyVal(key string, val string) error {
 	rc := RedigoConn.Get()
 	defer rc.Close()
 	if _, er := rc.Do("PING"); er != nil {
-		LogError("Redis not connected", er)
+		LogError("SetRedisKeyVal", "Redis not connected", er)
 		return er
 	}
 	_, err := rc.Do("SET", key, val)
 	if err != nil {
-		LogError(fmt.Sprintf("cannot set in redis key: %s with value: %s", key, val), err)
+		LogError("SetRedisKeyVal", fmt.Sprintf("cannot set in redis key: %s with value: %s", key, val), err)
 		return err
 	}
 	return nil

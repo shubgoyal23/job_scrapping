@@ -9,13 +9,13 @@ import (
 
 var Logger *os.File
 
-func LogError(strings string, err error) {
+func LogError(fu string, strings string, err error) {
 	if err == nil {
-		str := time.Now().Local().Format("2006-01-02 15:04:05") + ": " + strings + "\n"
+		str := time.Now().Local().Format("2006-01-02 15:04:05") + ": " + fu + ": Message : " + strings + "\n"
 		Logger.Write([]byte(str))
 		return
 	}
-	str := time.Now().String() + ": " + strings + " " + err.Error() + "\n"
+	str := time.Now().Local().Format("2006-01-02 15:04:05") + ": " + fu + ": Message : " + strings + ": Error : " + err.Error() + "\n"
 	Logger.Write([]byte(str))
 }
 
@@ -55,7 +55,7 @@ func InsertNaukriMapToMongoDB() {
 
 	// Insert the data into MongoDB
 	if err := InsertMongoDB(jg); err != nil {
-		LogError("cannot insert in mongodb", err)
+		LogError("InsertNaukriMapToMongoDB", "cannot insert in mongodb", err)
 	}
 }
 
@@ -86,7 +86,7 @@ func InsertFounditMapToMongoDB() {
 
 	// Insert the data into MongoDB
 	if err := InsertMongoDB(jg); err != nil {
-		LogError("cannot insert in mongodb", err)
+		LogError("InsertFounditMapToMongoDB", "cannot insert in mongodb", err)
 	}
 }
 func InsertIndeedMapToMongoDB() {
@@ -116,6 +116,6 @@ func InsertIndeedMapToMongoDB() {
 
 	// Insert the data into MongoDB
 	if err := InsertMongoDB(jg); err != nil {
-		LogError("cannot insert in mongodb", err)
+		LogError("InsertIndeedMapToMongoDB", "cannot insert in mongodb", err)
 	}
 }

@@ -42,7 +42,7 @@ func ScrapperElements(page *rod.Page, jobDMap types.JobDataScrapeMap) types.JobL
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Recovered in f", r)
-			LogError(fmt.Sprintf("ScrapperElements handler crashed for %s because %s", jobDMap.Homepage, r), nil)
+			LogError("ScrapperElements", fmt.Sprintf("ScrapperElements: handler crashed for %s because %s", jobDMap.Homepage, r), nil)
 		}
 	}()
 
@@ -61,7 +61,7 @@ func ScrapperElements(page *rod.Page, jobDMap types.JobDataScrapeMap) types.JobL
 					text = CleanText(text, fVal.Cleaner)
 					SetField(&jobDetails, fname, text)
 				} else {
-					LogError("cannot get "+fname, err)
+					LogError("ScrapperElements", "cannot get "+fname, err)
 				}
 			}
 		} else if fVal.TagType == "numeric" {
@@ -70,7 +70,7 @@ func ScrapperElements(page *rod.Page, jobDMap types.JobDataScrapeMap) types.JobL
 					text = CleanText(text, fVal.Cleaner)
 					SetField(&jobDetails, fname, text)
 				} else {
-					LogError("cannot get "+fname, err)
+					LogError("ScrapperElements", "cannot get "+fname, err)
 				}
 			}
 		} else if fVal.TagType == "url" {
@@ -82,7 +82,7 @@ func ScrapperElements(page *rod.Page, jobDMap types.JobDataScrapeMap) types.JobL
 					text1 := CleanUrl(*text, jobDMap.Homepage)
 					SetField(&jobDetails, fname, text1)
 				} else {
-					LogError("cannot get "+fname, err)
+					LogError("ScrapperElements", "cannot get "+fname, err)
 				}
 			}
 		} else if fVal.TagType == "date" {
@@ -104,7 +104,7 @@ func ScrapperElements(page *rod.Page, jobDMap types.JobDataScrapeMap) types.JobL
 					}
 					SetField(&jobDetails, fname, date)
 				} else {
-					LogError("cannot get "+fname, err)
+					LogError("ScrapperElements", "cannot get "+fname, err)
 				}
 			}
 		} else if fVal.TagType == "[]string" {
@@ -115,7 +115,7 @@ func ScrapperElements(page *rod.Page, jobDMap types.JobDataScrapeMap) types.JobL
 						text = CleanText(text, fVal.Cleaner)
 						elms = append(elms, text)
 					} else {
-						LogError("cannot get "+fname, err)
+						LogError("ScrapperElements", "cannot get "+fname, err)
 					}
 				}
 				SetField(&jobDetails, fname, elms)
@@ -144,7 +144,7 @@ func ScrapperElements(page *rod.Page, jobDMap types.JobDataScrapeMap) types.JobL
 					}
 					SetField(&jobDetails, fname, setdata)
 				} else {
-					LogError("cannot get "+fname, err)
+					LogError("ScrapperElements", "cannot get "+fname, err)
 				}
 			}
 		} else if fVal.TagType == "bool" {
@@ -157,7 +157,7 @@ func ScrapperElements(page *rod.Page, jobDMap types.JobDataScrapeMap) types.JobL
 					}
 					SetField(&jobDetails, fname, r)
 				} else {
-					LogError("cannot get "+fname, err)
+					LogError("ScrapperElements", "cannot get "+fname, err)
 				}
 			}
 		}
@@ -171,10 +171,10 @@ func LinkDupper(jobMap types.JobDataScrapeMap) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Recovered in f", r)
-			LogError(fmt.Sprintf("LinkDupper handler crashed because %s", r), nil)
+			LogError("LinkDupper", fmt.Sprintf("LinkDupper handler crashed because %s", r), nil)
 		}
 	}()
-	LogError(fmt.Sprintf("running linkDuper for %s scrapper at time: %s", jobMap.Homepage, time.Now().String()), nil)
+	LogError("LinkDupper", fmt.Sprintf("running linkDuper for %s scrapper at time: %s", jobMap.Homepage, time.Now().String()), nil)
 
 	// page := Browser.MustPage(jobMap.Homepage).MustWaitStable()
 	page := stealth.MustPage(Browser)
@@ -185,18 +185,18 @@ func LinkDupper(jobMap types.JobDataScrapeMap) {
 	for _, pl := range jobMap.PageLinks {
 		pageNErr := page.Navigate(pl.Link)
 		if pageNErr != nil {
-			LogError(fmt.Sprintf("error while navigating to page: %s", pl.Link), pageNErr)
+			LogError("LinkDupper", fmt.Sprintf("error while navigating to page: %s", pl.Link), pageNErr)
 			continue
 		}
 		errcount := 0
 		for {
 			if err := page.Timeout(30*time.Second).WaitDOMStable(10*time.Second, 5); err != nil {
-				LogError(fmt.Sprintf("error while waiting for page: %s, element: %s, errorcount : %d, err:", pl.Link, pl.Element, errcount), err)
+				LogError("LinkDupper", fmt.Sprintf("error while waiting for page: %s, element: %s, errorcount : %d, err:", pl.Link, pl.Element, errcount), err)
 				errcount++
 			}
 			aTags, aTagErr := page.Timeout(30 * time.Second).Elements(pl.Element)
 			if aTagErr != nil {
-				LogError(fmt.Sprintf("error while getting elements from page: %s, element: %s, err:", pl.Link, pl.Element), aTagErr)
+				LogError("LinkDupper", fmt.Sprintf("error while getting elements from page: %s, element: %s, err:", pl.Link, pl.Element), aTagErr)
 			}
 			for _, a := range aTags {
 				aTag, aTagErr := a.Attribute("href")
@@ -204,7 +204,7 @@ func LinkDupper(jobMap types.JobDataScrapeMap) {
 					continue
 				}
 				if aTagErr != nil {
-					LogError(fmt.Sprintf("error while getting href from page: %s, element: %s, err:", pl.Link, pl.Element), aTagErr)
+					LogError("LinkDupper", fmt.Sprintf("error while getting href from page: %s, element: %s, err:", pl.Link, pl.Element), aTagErr)
 				}
 				lk := CleanUrl(*aTag, jobMap.Homepage)
 				if lk == "" {
@@ -217,7 +217,7 @@ func LinkDupper(jobMap types.JobDataScrapeMap) {
 				links = append(links, lk)
 				if len(links) >= 100 {
 					if err := InsertRedisListLPush("job_links", links); err != nil {
-						LogError("cannot insert in redis list", err)
+						LogError("LinkDupper", "cannot insert in redis list", err)
 					} else {
 						links = []string{}
 					}
@@ -226,7 +226,7 @@ func LinkDupper(jobMap types.JobDataScrapeMap) {
 			// next button click
 			nextBtn, nextBtnErr := page.Timeout(30 * time.Second).Element(pl.NextPageBtn)
 			if nextBtnErr != nil {
-				LogError(fmt.Sprintf("error while getting next page button from page: %s, element: %s, errorcount : %d, err:", pl.Link, pl.NextPageBtn, errcount), nextBtnErr)
+				LogError("LinkDupper", fmt.Sprintf("error while getting next page button from page: %s, element: %s, errorcount : %d, err:", pl.Link, pl.NextPageBtn, errcount), nextBtnErr)
 				errcount++
 				// frame := page.MustElements("iframe")
 				// for _, f := range frame {
@@ -245,10 +245,10 @@ func LinkDupper(jobMap types.JobDataScrapeMap) {
 			}
 			nextBtnErr = nextBtn.Click("left", 1)
 			if nextBtnErr != nil {
-				LogError(fmt.Sprintf("error while clicking next page button from page: %s, element: %s, errorcount : %d, err:", pl.Link, pl.NextPageBtn, errcount), nextBtnErr)
+				LogError("LinkDupper", fmt.Sprintf("error while clicking next page button from page: %s, element: %s, errorcount : %d, err:", pl.Link, pl.NextPageBtn, errcount), nextBtnErr)
 				errcount++
 			}
-			RandTimeSleep(10)
+			RandTimeSleep(3)
 			if errcount >= 10 {
 				break
 			}
@@ -260,10 +260,10 @@ func LinkDupper(jobMap types.JobDataScrapeMap) {
 func GetDataFromLink() {
 	defer func() {
 		if r := recover(); r != nil {
-			LogError(fmt.Sprintf("GetDataFromLink crashed because %s", r), nil)
+			LogError("GetDataFromLink", fmt.Sprintf("GetDataFromLink crashed because %s", r), nil)
 		}
 	}()
-	LogError(fmt.Sprintf("running GetDataFromLink at time: %s", time.Now().String()), nil)
+	LogError("GetDataFromLink", fmt.Sprintf("running GetDataFromLink at time: %s", time.Now().String()), nil)
 	// page := Browser.MustPage()
 	page := stealth.MustPage(Browser)
 	defer page.Close()
@@ -275,15 +275,17 @@ func GetDataFromLink() {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
+	Redislinks := make(chan string, 100)
+	var errorCount int
 	// insert data if crashed
 	go func(ctx context.Context) {
 		<-ctx.Done()
-		LogError("GetDataFromLink context done", nil)
+		LogError("GetDataFromLink", "GetDataFromLink context done", nil)
+		close(Redislinks)
 		JobD.mu.Lock()
 		if len(JobD.JobData) != 0 {
 			if fres, err := InsertBulkDataPostgres(JobD.JobData); err != nil {
-				LogError("cannot insert job data", err)
+				LogError("GetDataFromLink", "cannot insert job data", err)
 			} else {
 				if len(fres) > 0 {
 					InsertRedisSetBulk("Failde_posted_job_links", fres)
@@ -294,42 +296,59 @@ func GetDataFromLink() {
 			JobD.JobLinks = []string{}
 		}
 		JobD.mu.Unlock()
+		pending := []string{}
+		for d := range Redislinks {
+			pending = append(pending, d)
+		}
+		if e := InsertRedisListLPush("job_links", pending); e != nil {
+			LogError("GetDataFromLink", "cannot insert in redis list", e)
+		}
 	}(ctx)
 
 	for {
 		UniqueTags, err := GetRedisListRPOP("job_links", 100)
 		if err != nil {
-			LogError("cannot get from redis", err)
+			LogError("GetDataFromLink", "cannot get from redis", err)
 			return
 		}
-
 		for _, d := range UniqueTags {
-			link := string(d)
+			Redislinks <- string(d)
+		}
+		for d := range Redislinks {
+			if errorCount >= 10 {
+				return
+			}
+			link := d
 			// check if link exists in redis
 			if f, err := CheckRedisSetMemeber("posted_job_links", link); err != nil {
-				LogError("cannot get from redis", err)
+				LogError("GetDataFromLink", "cannot get from redis", err)
+				errorCount++
 				continue
 			} else if f {
 				continue
 			}
 			pageNErr := page.Timeout(30 * time.Second).Navigate(link)
 			if pageNErr != nil {
-				LogError(fmt.Sprintf("error while navigating to page: %s", link), pageNErr)
+				LogError("GetDataFromLink", fmt.Sprintf("error while navigating to page: %s", link), pageNErr)
+				errorCount++
 				continue
 			}
 			if err := page.Timeout(30 * time.Second).WaitLoad(); err != nil {
-				LogError("error while waiting for page to be stable", err)
+				LogError("GetDataFromLink", "error while waiting for page to be stable", err)
+				errorCount++
 				continue
 			}
 			u, err := url.Parse(link)
 			if err != nil {
-				LogError("cannot parse url", err)
+				LogError("GetDataFromLink", "cannot parse url", err)
+				errorCount++
 				continue
 			}
 			homeDomain := u.Scheme + "://" + u.Host
 			sMap, ok := ScrapeMap[homeDomain]
 			if !ok {
-				LogError(fmt.Sprintf("cannot get ScrapeMap for %s", homeDomain), nil)
+				LogError("GetDataFromLink", fmt.Sprintf("cannot get ScrapeMap for %s", homeDomain), nil)
+				errorCount++
 				continue
 			}
 
@@ -346,7 +365,7 @@ func GetDataFromLink() {
 			if len(JobD.JobData) == 100 {
 				JobD.mu.Lock()
 				if fres, err := InsertBulkDataPostgres(JobD.JobData); err != nil {
-					LogError("cannot insert job data", err)
+					LogError("GetDataFromLink", "cannot insert job data", err)
 				} else {
 					if len(fres) > 0 {
 						InsertRedisSetBulk("Failde_posted_job_links", fres)
@@ -357,7 +376,7 @@ func GetDataFromLink() {
 				JobD.JobLinks = []string{}
 				JobD.mu.Unlock()
 			}
-			RandTimeSleep(10)
+			RandTimeSleep(3)
 		}
 	}
 }
@@ -366,7 +385,7 @@ func GetDataFromLink() {
 func UpdateDataFromLink() {
 	defer func() {
 		if r := recover(); r != nil {
-			LogError(fmt.Sprintf("updateDataFromLink crashed because %s", r), nil)
+			LogError("UpdateDataFromLink", fmt.Sprintf("updateDataFromLink crashed because %s", r), nil)
 		}
 	}()
 
@@ -376,7 +395,7 @@ func UpdateDataFromLink() {
 
 	r, err := GetManyDocPostgres("SELECT * FROM job_listings WHERE updated_at > now() - interval '7 days'", nil)
 	if err != nil {
-		LogError("Unable to get data from Postgres, check logs", err)
+		LogError("UpdateDataFromLink", "Unable to get data from Postgres, check logs", err)
 		return
 	}
 	defer r.Close()
@@ -384,17 +403,17 @@ func UpdateDataFromLink() {
 	for r.Next() {
 		var res types.JobListing
 		if err := r.Scan(&res.ID, &res.JobTitle, &res.CompanyName, &res.CompanyURL, &res.JobDescription, &res.JobType, &res.Location, &res.RemoteOption, &res.SalaryMin, &res.SalaryMax, &res.ExperienceMin, &res.ExperienceMax, &res.EducationRequirements, &res.Skills, &res.Benefits, &res.JobPostingDate, &res.ApplicationDeadline, &res.JobURL, &res.CreatedAt, &res.UpdatedAt, &res.IsActive); err != nil {
-			LogError("cannot decode doc in postgres", err)
+			LogError("UpdateDataFromLink", "cannot decode doc in postgres", err)
 			continue
 		}
 		val = append(val, res)
 	}
 	del := func(val int, str string) {
 		if err := DeleteDocPostgres("DELETE FROM job_listings WHERE id = $1", val); err != nil {
-			LogError("cannot delete doc in postgres", err)
+			LogError("UpdateDataFromLink", "cannot delete doc in postgres", err)
 		}
 		if _, err := DeleteRedisSetMemeber("posted_job_links", str); err != nil {
-			LogError("cannot delete from redis", err)
+			LogError("UpdateDataFromLink", "cannot delete from redis", err)
 		}
 	}
 
@@ -402,24 +421,24 @@ func UpdateDataFromLink() {
 		link := jdata.JobURL
 		pageNErr := page.Timeout(30 * time.Second).Navigate(link)
 		if pageNErr != nil {
-			LogError(fmt.Sprintf("error while navigating to page: %s", link), pageNErr)
+			LogError("UpdateDataFromLink", fmt.Sprintf("error while navigating to page: %s", link), pageNErr)
 			del(jdata.ID, link)
 			continue
 		}
 		if err := page.Timeout(30 * time.Second).WaitLoad(); err != nil {
-			LogError("error while waiting for page to be stable", err)
+			LogError("UpdateDataFromLink", "error while waiting for page to be stable", err)
 			del(jdata.ID, link)
 			continue
 		}
 		u, err := url.Parse(link)
 		if err != nil {
-			LogError("cannot parse url", err)
+			LogError("UpdateDataFromLink", "cannot parse url", err)
 			continue
 		}
 		homeDomain := u.Scheme + "://" + u.Host
 		sMap, ok := ScrapeMap[homeDomain]
 		if !ok {
-			LogError(fmt.Sprintf("cannot get ScrapeMap for %s", homeDomain), nil)
+			LogError("UpdateDataFromLink", fmt.Sprintf("cannot get ScrapeMap for %s", homeDomain), nil)
 			continue
 		}
 
@@ -427,7 +446,7 @@ func UpdateDataFromLink() {
 		da := ScrapperElements(page, sMap)
 		if reflect.DeepEqual(da, jdata) {
 			if e := UpdateDocPostgres("UPDATE job_listings SET updated_at = now() WHERE id = $1", jdata.ID); e != nil {
-				LogError("cannot update doc in postgres", e)
+				LogError("UpdateDataFromLink", "cannot update doc in postgres", e)
 			}
 		} else {
 			da.ID = jdata.ID
@@ -486,7 +505,7 @@ func CleanUrl(l string, home_url string) string {
 		ourl, oerr := url.JoinPath(home_url, str.Path)
 		if oerr != nil {
 			// Log the error and return empty string
-			LogError("ourl", oerr)
+			LogError("CleanUrl", "ourl", oerr)
 			return ""
 		}
 		// Check if the cleaned URL matches the regex
@@ -524,6 +543,6 @@ func RandTimeSleep(i int) {
 	i = i * 1000
 	rand := rand.New((rand.NewSource(time.Now().UnixNano())))
 	r := rand.Intn(i) + 100
-	t := time.Duration(r) * time.Microsecond
-	time.Sleep(time.Microsecond * t)
+	t := time.Duration(r)
+	time.Sleep(time.Millisecond * t)
 }

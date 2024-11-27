@@ -16,12 +16,12 @@ var postgresConn *pgxpool.Pool
 func InitPostgresDataBase() error {
 	conn, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
 	if err != nil {
-		LogError("cannot connect to database", err)
+		LogError("InitPostgresDataBase", "cannot connect to database", err)
 		return err
 	}
 	postgresConn = conn
 	if err := postgresConn.Ping(context.Background()); err != nil {
-		LogError("cannot connect to database", err)
+		LogError("InitPostgresDataBase", "cannot connect to database", err)
 		return err
 	}
 	return nil
@@ -29,7 +29,7 @@ func InitPostgresDataBase() error {
 
 func CreateTablePostgres() error {
 	if _, err := postgresConn.Exec(context.Background(), "CREATE TABLE IF NOT EXISTS job_listings (id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, job_title VARCHAR(255) NOT NULL, company_name VARCHAR(255) NOT NULL, company_url VARCHAR(255), job_description TEXT NOT NULL, job_type VARCHAR(225), location VARCHAR(255) NOT NULL, remote_option BOOLEAN DEFAULT FALSE, salary_min DECIMAL(10, 2), salary_max DECIMAL(10, 2), experience_min INT, experience_max INT, education_requirements TEXT[], skills TEXT[], benefits TEXT[], job_posting_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, application_deadline TIMESTAMP, job_url VARCHAR(255) NOT NULL UNIQUE, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, is_active BOOLEAN DEFAULT TRUE);"); err != nil {
-		LogError("cannot create table", err)
+		LogError("CreateTablePostgres", "cannot create table", err)
 		return err
 	}
 	return nil
@@ -47,7 +47,7 @@ func InsertBulkDataPostgres(val []types.JobListing) ([]string, error) {
 	for _, v := range val {
 		_, err := res.Exec()
 		if err != nil {
-			LogError(fmt.Sprintf("Failed to insert record %s", v.JobURL), err)
+			LogError("InsertBulkDataPostgres", fmt.Sprintf("Failed to insert record %s", v.JobURL), err)
 			failedRecords = append(failedRecords, v.JobURL)
 		}
 	}
@@ -57,12 +57,12 @@ func InsertBulkDataPostgres(val []types.JobListing) ([]string, error) {
 func GetManyDocPostgres(query string, vals []interface{}) (pgx.Rows, error) {
 	r, err := postgresConn.Query(context.Background(), query, vals...)
 	if err != nil {
-		LogError("cannot get doc in postgres", err)
+		LogError("GetManyDocPostgres", "cannot get doc in postgres", err)
 		r.Close()
 		return nil, err
 	}
 	if r.Err() != nil {
-		LogError("cannot get doc in postgres", r.Err())
+		LogError("GetManyDocPostgres", "cannot get doc in postgres", r.Err())
 		err := r.Err()
 		r.Close()
 		return nil, err
@@ -73,7 +73,7 @@ func GetManyDocPostgres(query string, vals []interface{}) (pgx.Rows, error) {
 func DeleteDocPostgres(query string, val int) error {
 	_, err := postgresConn.Exec(context.Background(), query, val)
 	if err != nil {
-		LogError("cannot delete doc in postgres", err)
+		LogError("DeleteDocPostgres", "cannot delete doc in postgres", err)
 		return err
 	}
 	return nil
@@ -82,7 +82,7 @@ func DeleteDocPostgres(query string, val int) error {
 func UpdateDocPostgres(query string, val interface{}) error {
 	_, err := postgresConn.Exec(context.Background(), query, val)
 	if err != nil {
-		LogError("cannot update doc in postgres", err)
+		LogError("UpdateDocPostgres", "cannot update doc in postgres", err)
 		return err
 	}
 	return nil
