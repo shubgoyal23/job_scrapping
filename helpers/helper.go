@@ -20,7 +20,8 @@ func LogError(fu string, strings string, err error) {
 }
 
 func InitLogger() *os.File {
-	file, err := os.OpenFile("log.txt", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+	os.MkdirAll("./log", os.ModePerm)
+	file, err := os.OpenFile("./log/log.txt", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
 	Logger = file
 	if err != nil {
 		log.Fatalf("error opening file: %v", err)
