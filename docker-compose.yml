@@ -1,0 +1,30 @@
+services:
+  brower:
+    image: ghcr.io/go-rod/rod
+    container_name: rodbrower
+    networks:
+      - n_scrapper
+    ports:
+      - "7317:7317"
+
+  rod-app:
+    image: rod-app 
+    container_name: rod-app
+    env_file:
+      - .env
+    networks:
+      - n_scrapper
+
+  milvus-server:
+    image: rod-server 
+    container_name: rod-server
+    env_file:
+      - .env
+    networks:
+      - n_scrapper
+    ports:
+      - "8000:8000"
+
+networks:
+  n_scrapper:
+    driver: bridge

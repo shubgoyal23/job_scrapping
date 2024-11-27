@@ -24,13 +24,13 @@ var Browser *rod.Browser
 
 // get browser
 func InitBrowser() bool {
-	var Headless = true
-	h := os.Getenv("Headless")
-	if h != "" {
-		Headless = false
+	var PORT = ""
+	h := os.Getenv("BROWSER_POST")
+	if h == "" {
+		PORT = "7317"
 	}
-	path, _ := launcher.LookPath()
-	u := launcher.New().Bin(path).Headless(Headless).MustLaunch()
+	u := launcher.MustResolveURL("http://rodbrower:" + PORT)
+	// u := launcher.New().Bin(path).Headless(Headless).MustLaunch()
 	browser := rod.New().ControlURL(u).MustConnect()
 	browser.MustPage()
 	Browser = browser

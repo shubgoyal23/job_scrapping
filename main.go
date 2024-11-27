@@ -2,13 +2,11 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"nScrapper/helpers"
 	"nScrapper/types"
 	"os"
 	"time"
 
-	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -19,11 +17,11 @@ func main() {
 			helpers.LogError("main", fmt.Sprintf("begin handler crashed because %s", r), nil)
 		}
 	}()
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-		return
-	}
+	// err := godotenv.Load()
+	// if err != nil {
+	// 	log.Fatal("Error loading .env file")
+	// 	return
+	// }
 	logs := helpers.InitLogger()
 	defer logs.Close()
 
