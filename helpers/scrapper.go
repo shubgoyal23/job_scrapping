@@ -215,12 +215,13 @@ func LinkDupper(jobMap types.JobDataScrapeMap) {
 				}
 				AllTags[lk] = true
 				links = append(links, lk)
-				if len(links) >= 100 {
-					if err := InsertRedisListLPush("job_links", links); err != nil {
-						LogError("LinkDupper", "cannot insert in redis list", err)
-					} else {
-						links = []string{}
-					}
+			}
+			// insert in redis
+			if len(links) >= 100 {
+				if err := InsertRedisListLPush("job_links", links); err != nil {
+					LogError("LinkDupper", "cannot insert in redis list", err)
+				} else {
+					links = []string{}
 				}
 			}
 			// next button click
@@ -299,6 +300,9 @@ func GetDataFromLink() {
 		pending := []string{}
 		for d := range Redislinks {
 			pending = append(pending, d)
+		}
+		if len(pending) == 0 {
+			return
 		}
 		if e := InsertRedisListLPush("job_links", pending); e != nil {
 			LogError("GetDataFromLink", "cannot insert in redis list", e)

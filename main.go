@@ -60,9 +60,9 @@ func main() {
 		}
 		helpers.ScrapeMap[data.Homepage] = data
 	}
-	for i := 0; i < 4; i++ {
-		go helpers.GetDataFromLink()
-	}
+
+	go helpers.GetDataFromLink()
+
 	for _, v := range helpers.ScrapeMap {
 		helpers.LinkDupper(v)
 	}
@@ -87,7 +87,7 @@ func main() {
 			helpers.UpdateDataFromLink()
 		}
 	}()
-	helpers.PushToMilvus()
+	go helpers.PushToMilvus()
 	go func() {
 		for range time.Tick(time.Hour * 24) {
 			helpers.PushToMilvus()
