@@ -527,12 +527,6 @@ func CleanUrl(l string, home_url string) string {
 		str.Scheme = "https"
 	}
 
-	// Parse the home URL to extract the hostname
-	// h, err := url.Parse(home_url)
-	// if err != nil || str.Hostname() != h.Hostname() {
-	// 	return "" // Return empty if hostnames do not match or if home_url is invalid
-	// }
-
 	// Match the URL against the regex
 	if !re.MatchString(str.String()) {
 		return ""
@@ -540,7 +534,7 @@ func CleanUrl(l string, home_url string) string {
 	if str.RawQuery != "" {
 		return str.String() + "?" + str.RawQuery
 	}
-	return "" // Return empty if the URL does not match
+	return str.String()
 }
 
 func RandTimeSleep(i int) {

@@ -82,17 +82,17 @@ func main() {
 		}
 	}()
 
-	go func() {
-		for range time.Tick(time.Hour * 24) {
-			helpers.UpdateDataFromLink()
-		}
-	}()
-	go helpers.PushToMilvus()
-	go func() {
-		for range time.Tick(time.Hour * 24) {
-			helpers.PushToMilvus()
-		}
-	}()
+	// go func() {
+	// 	for range time.Tick(time.Hour * 24) {
+	// 		helpers.UpdateDataFromLink()
+	// 	}
+	// }()
+	// go helpers.PushToMilvus()
+	// go func() {
+	// 	for range time.Tick(time.Hour * 24) {
+	// 		helpers.PushToMilvus()
+	// 	}
+	// }()
 
 	select {}
 }
