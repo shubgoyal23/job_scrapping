@@ -17,15 +17,15 @@ services:
     volumes:
       - ./logsfiles:/app/log
 
-  milvus-server:
-    image: rod-server 
-    container_name: rod-server
-    env_file:
-      - .env
-    networks:
-      - n_scrapper
-    ports:
-      - "8000:8000"
+  # milvus-server:
+  #   image: rod-server 
+  #   container_name: rod-server
+  #   env_file:
+  #     - .env
+  #   networks:
+  #     - n_scrapper
+  #   ports:
+  #     - "8000:8000"
 
 networks:
   n_scrapper:
