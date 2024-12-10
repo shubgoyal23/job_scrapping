@@ -87,20 +87,38 @@ func InsertRedisSet(key string, val string) (bool, error) {
 }
 
 // insert data in redis set
-func InsertRedisSetBulk(key string, val []string) (bool, error) {
+func InsertRedisSetBulk(key string, val []string) error {
 	rc := RedigoConn.Get()
 	defer rc.Close()
 	if _, er := rc.Do("PING"); er != nil {
 		LogError("InsertRedisSetBulk", "Redis not connected", er)
-		return false, er
+		return er
 	}
 	ar := redis.Args{}.Add(key).AddFlat(val)
 	_, err := rc.Do("SADD", ar...)
 	if err != nil {
 		LogError("InsertRedisSetBulk", fmt.Sprintf("cannot insert in redis set key: %s with value: %s", key, val), err)
-		return false, err
+		return err
 	}
-	return true, nil
+	return nil
+}
+
+// insert data in redis list
+func GetRedisSetSPOP(key string, n int) ([][]byte, error) {
+	r := [][]byte{}
+	rc := RedigoConn.Get()
+	defer rc.Close()
+	if _, er := rc.Do("PING"); er != nil {
+		LogError("GetRedisListRPOP", "Redis not connected", er)
+		return r, er
+	}
+	res, err := redis.ByteSlices(rc.Do("SPOP", key, n))
+	if err != nil {
+		LogError("GetRedisListRPOP", fmt.Sprintf("Cannot get items from redis list key: %s", key), err)
+		return r, err
+	}
+	r = append(r, res...)
+	return r, nil
 }
 
 // check if data exists in redis set
