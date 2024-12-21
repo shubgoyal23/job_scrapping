@@ -5,8 +5,11 @@ import (
 	"nScrapper/helpers"
 	"nScrapper/types"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
+	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -17,11 +20,12 @@ func main() {
 			helpers.LogError("main", fmt.Sprintf("begin handler crashed because %s", r), nil)
 		}
 	}()
-	// err := godotenv.Load()
-	// if err != nil {
-	// 	log.Fatal("Error loading .env file")
-	// 	return
-	// }
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	err := godotenv.Load()
+	if err != nil {
+		helpers.LogError("main", "Unable to load .env file, check logs", err)
+	}
 	logs := helpers.InitLogger()
 	defer logs.Close()
 
@@ -76,8 +80,8 @@ func main() {
 		}
 	}()
 	go func() {
-		for range time.Tick(time.Hour * 1) {
-			helpers.LogError("main", fmt.Sprintf("running Round trip of 1 hours at time: %s", time.Now().String()), nil)
+		for range time.Tick(time.Minute * 15) {
+			helpers.LogError("main", fmt.Sprintf("running Round trip of 15 minutes at time: %s", time.Now().String()), nil)
 			helpers.GetDataFromLink()
 		}
 	}()
@@ -94,5 +98,8 @@ func main() {
 	// 	}
 	// }()
 
-	select {}
+	<-stop
+	helpers.LogError("main", fmt.Sprintf("begin handler stopped at time: %s", time.Now().String()), nil)
+	helpers.Browser.Close()
+
 }

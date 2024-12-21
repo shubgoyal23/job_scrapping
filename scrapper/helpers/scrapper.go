@@ -284,7 +284,7 @@ func GetDataFromLink() {
 		LogError("GetDataFromLink", "GetDataFromLink context done", nil)
 		close(Redislinks)
 		JobD.mu.Lock()
-		if len(JobD.JobData) != 0 {
+		if len(JobD.JobData) > 0 {
 			if fres, err := InsertBulkDataPostgres(JobD.JobData); err != nil {
 				LogError("GetDataFromLink", "cannot insert job data", err)
 			} else {
@@ -309,80 +309,79 @@ func GetDataFromLink() {
 		}
 	}(ctx)
 
-	for {
-		UniqueTags, err := GetRedisSetSPOP("job_links", 100)
-		if err != nil {
-			LogError("GetDataFromLink", "cannot get from redis", err)
+	UniqueTags, err := GetRedisSetSPOP("job_links", 100)
+	if err != nil {
+		LogError("GetDataFromLink", "cannot get from redis", err)
+		return
+	}
+	for _, d := range UniqueTags {
+		Redislinks <- string(d)
+	}
+	for d := range Redislinks {
+		if errorCount >= 10 {
 			return
 		}
-		for _, d := range UniqueTags {
-			Redislinks <- string(d)
+		link := d
+		// check if link exists in redis
+		if f, err := CheckRedisSetMemeber("posted_job_links", link); err != nil {
+			LogError("GetDataFromLink", "cannot get from redis", err)
+			errorCount++
+			continue
+		} else if f {
+			continue
 		}
-		for d := range Redislinks {
-			if errorCount >= 10 {
-				return
-			}
-			link := d
-			// check if link exists in redis
-			if f, err := CheckRedisSetMemeber("posted_job_links", link); err != nil {
-				LogError("GetDataFromLink", "cannot get from redis", err)
-				errorCount++
-				continue
-			} else if f {
-				continue
-			}
-			pageNErr := page.Timeout(30 * time.Second).Navigate(link)
-			if pageNErr != nil {
-				LogError("GetDataFromLink", fmt.Sprintf("error while navigating to page: %s", link), pageNErr)
-				errorCount++
-				continue
-			}
-			if err := page.Timeout(30 * time.Second).WaitLoad(); err != nil {
-				LogError("GetDataFromLink", "error while waiting for page to be stable", err)
-				errorCount++
-				continue
-			}
-			u, err := url.Parse(link)
-			if err != nil {
-				LogError("GetDataFromLink", "cannot parse url", err)
-				errorCount++
-				continue
-			}
-			homeDomain := u.Scheme + "://" + u.Host
-			sMap, ok := ScrapeMap[homeDomain]
-			if !ok {
-				LogError("GetDataFromLink", fmt.Sprintf("cannot get ScrapeMap for %s", homeDomain), nil)
-				errorCount++
-				continue
-			}
+		pageNErr := page.Timeout(30 * time.Second).Navigate(link)
+		if pageNErr != nil {
+			LogError("GetDataFromLink", fmt.Sprintf("error while navigating to page: %s", link), pageNErr)
+			errorCount++
+			continue
+		}
+		if err := page.Timeout(30 * time.Second).WaitLoad(); err != nil {
+			LogError("GetDataFromLink", "error while waiting for page to be stable", err)
+			errorCount++
+			continue
+		}
+		u, err := url.Parse(link)
+		if err != nil {
+			LogError("GetDataFromLink", "cannot parse url", err)
+			errorCount++
+			continue
+		}
+		homeDomain := u.Scheme + "://" + u.Host
+		sMap, ok := ScrapeMap[homeDomain]
+		if !ok {
+			LogError("GetDataFromLink", fmt.Sprintf("cannot get ScrapeMap for %s", homeDomain), nil)
+			errorCount++
+			continue
+		}
 
-			// scrape elements on page
-			da := ScrapperElements(page, sMap)
-			da.JobURL = link
-			da.ApplicationDeadline = da.JobPostingDate.AddDate(0, 0, 30)
-			da.CreatedAt = time.Now()
-			da.UpdatedAt = time.Now()
+		// scrape elements on page
+		da := ScrapperElements(page, sMap)
+		da.JobURL = link
+		da.ApplicationDeadline = da.JobPostingDate.AddDate(0, 0, 30)
+		da.CreatedAt = time.Now()
+		da.UpdatedAt = time.Now()
+		JobD.mu.Lock()
+		JobD.JobData = append(JobD.JobData, da)
+		JobD.JobLinks = append(JobD.JobLinks, link)
+		JobD.mu.Unlock()
+		if len(JobD.JobData) == 100 {
 			JobD.mu.Lock()
-			JobD.JobData = append(JobD.JobData, da)
-			JobD.JobLinks = append(JobD.JobLinks, link)
-			JobD.mu.Unlock()
-			if len(JobD.JobData) == 100 {
-				JobD.mu.Lock()
-				if fres, err := InsertBulkDataPostgres(JobD.JobData); err != nil {
-					LogError("GetDataFromLink", "cannot insert job data", err)
-				} else {
-					if len(fres) > 0 {
-						InsertRedisSetBulk("Failde_posted_job_links", fres)
-					}
-					InsertRedisSetBulk("posted_job_links", JobD.JobLinks)
+			if fres, err := InsertBulkDataPostgres(JobD.JobData); err != nil {
+				LogError("GetDataFromLink", "cannot insert job data", err)
+			} else {
+				if len(fres) > 0 {
+					InsertRedisSetBulk("Failde_posted_job_links", fres)
 				}
-				JobD.JobData = []types.JobListing{}
-				JobD.JobLinks = []string{}
-				JobD.mu.Unlock()
+				InsertRedisSetBulk("posted_job_links", JobD.JobLinks)
 			}
-			RandTimeSleep(3)
+			JobD.JobData = []types.JobListing{}
+			JobD.JobLinks = []string{}
+			JobD.mu.Unlock()
 		}
+		RandTimeSleep(3)
 	}
+
 }
 
 // this function gets the data from the links in chan UniqueTags and stores it in postgres and redis set
