@@ -24,16 +24,24 @@ var Browser *rod.Browser
 
 // get browser
 func InitBrowser() bool {
+	local := os.Getenv("LOCAL")
+	if local != "" {
+		if path, exists := launcher.LookPath(); exists {
+			u := launcher.New().Bin(path).Headless(false).MustLaunch()
+			Browser = rod.New().ControlURL(u).NoDefaultDevice().MustConnect()
+		}
+		page := Browser.MustPage()
+		page.MustWindowFullscreen()
+		return true
+	}
 	var PORT = ""
 	h := os.Getenv("BROWSER_POST")
 	if h == "" {
 		PORT = "7317"
 	}
 	u := launcher.MustResolveURL("http://rodbrower:" + PORT)
-	// u := launcher.New().Bin(path).Headless(Headless).MustLaunch()
-	browser := rod.New().ControlURL(u).MustConnect()
-	browser.MustPage()
-	Browser = browser
+	Browser = rod.New().ControlURL(u).NoDefaultDevice().MustConnect()
+	Browser.MustPage().MustWindowFullscreen()
 	return true
 }
 
@@ -167,7 +175,7 @@ func ScrapperElements(page *rod.Page, jobDMap types.JobDataScrapeMap) types.JobL
 }
 
 // this function finds all the links of jobs on the page and stores them in chan UniqueLinks
-func LinkDupper(jobMap types.JobDataScrapeMap) {
+func LinkDupper(jobMap types.JobDataScrapeMap, ctx context.Context) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Recovered in f", r)
@@ -182,6 +190,14 @@ func LinkDupper(jobMap types.JobDataScrapeMap) {
 
 	AllTags := make(map[string]bool)
 	links := []string{}
+
+	go func(ctx context.Context) {
+		<-ctx.Done()
+		LogError("LinkDupper", "LinkDupper context done", nil)
+		if err := InsertRedisSetBulk("job_links", links); err != nil {
+			LogError("LinkDupper", "cannot insert in redis list", err)
+		}
+	}(ctx)
 	for _, pl := range jobMap.PageLinks {
 		pageNErr := page.Navigate(pl.Link)
 		if pageNErr != nil {
@@ -258,7 +274,7 @@ func LinkDupper(jobMap types.JobDataScrapeMap) {
 }
 
 // this function gets the data from the links in chan UniqueTags and stores it in postgres and redis set
-func GetDataFromLink() {
+func GetDataFromLink(ctx context.Context) {
 	defer func() {
 		if r := recover(); r != nil {
 			LogError("GetDataFromLink", fmt.Sprintf("GetDataFromLink crashed because %s", r), nil)
@@ -274,8 +290,7 @@ func GetDataFromLink() {
 		JobData  []types.JobListing
 		JobLinks []string
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+
 	Redislinks := make(chan string, 100)
 	var errorCount int
 	// insert data if crashed
@@ -379,9 +394,8 @@ func GetDataFromLink() {
 			JobD.JobLinks = []string{}
 			JobD.mu.Unlock()
 		}
-		RandTimeSleep(3)
+		RandTimeSleep(1)
 	}
-
 }
 
 // this function gets the data from the links in chan UniqueTags and stores it in postgres and redis set

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"nScrapper/helpers"
 	"nScrapper/types"
@@ -21,7 +22,7 @@ func main() {
 		}
 	}()
 	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 	err := godotenv.Load()
 	if err != nil {
 		helpers.LogError("main", "Unable to load .env file, check logs", err)
@@ -51,6 +52,7 @@ func main() {
 		helpers.LogError("main", "Unable to get data from MongoDB, check logs", err)
 		return
 	}
+	ctx, cancel := context.WithCancel(context.Background())
 	for _, v := range m {
 		jsond, err := bson.Marshal(v)
 		if err != nil {
@@ -65,24 +67,26 @@ func main() {
 		helpers.ScrapeMap[data.Homepage] = data
 	}
 
-	go helpers.GetDataFromLink()
+	go helpers.GetDataFromLink(ctx)
 
-	for _, v := range helpers.ScrapeMap {
-		helpers.LinkDupper(v)
-	}
+	go func() {
+		for _, v := range helpers.ScrapeMap {
+			helpers.LinkDupper(v, ctx)
+		}
+	}()
 	go func() {
 		for range time.Tick(time.Hour * 12) {
 			helpers.LogError("main", fmt.Sprintf("running Round trip of 12 hours at time: %s", time.Now().String()), nil)
 			for _, v := range helpers.ScrapeMap {
-				helpers.LinkDupper(v)
+				go helpers.LinkDupper(v, ctx)
 				time.Sleep(time.Hour * 1)
 			}
 		}
 	}()
 	go func() {
-		for range time.Tick(time.Minute * 15) {
+		for range time.Tick(time.Minute * 5) {
 			helpers.LogError("main", fmt.Sprintf("running Round trip of 15 minutes at time: %s", time.Now().String()), nil)
-			helpers.GetDataFromLink()
+			go helpers.GetDataFromLink(ctx)
 		}
 	}()
 
@@ -100,6 +104,7 @@ func main() {
 
 	<-stop
 	helpers.LogError("main", fmt.Sprintf("begin handler stopped at time: %s", time.Now().String()), nil)
+	cancel()
 	helpers.Browser.Close()
 
 }
